@@ -20,9 +20,10 @@ export function TableSelector({ value, onChange }: TableSelectorProps) {
         Select Table
       </Label>
       <Select
-        value={value === null ? undefined : String(value)}
+        {...(value === null ? {} : { value: String(value) })}
         onValueChange={(next) => onChange(Number(next))}
       >
+
         <SelectTrigger id="table-select" className="h-14 w-full text-base">
           <SelectValue placeholder="Choose a table…" />
         </SelectTrigger>
