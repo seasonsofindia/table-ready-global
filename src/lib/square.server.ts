@@ -57,7 +57,7 @@ export async function squareFetch<T>(
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    body: init.body === undefined ? null : JSON.stringify(init.body),
   });
 
   const text = await response.text();
