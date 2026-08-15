@@ -168,10 +168,10 @@ function OrderScreen() {
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
             <UtensilsCrossed className="size-7 text-primary" />
-            Table Orders
+            Table Tab
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Live Square menu · orders go straight to the kitchen
+            Your table to the kitchen
           </p>
         </div>
         <Button asChild variant="ghost" size="icon" className="size-11">
