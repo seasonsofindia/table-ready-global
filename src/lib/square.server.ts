@@ -301,6 +301,11 @@ export async function createOrder(
       order: {
         location_id: locationId,
         reference_id: tableReferenceId(tableNumber),
+        // Dine-in orders surface in the Square Dashboard / POS open-ticket list
+        // through ticket_name, the same way POS-created dine-in tickets do.
+        // A PICKUP fulfillment routed them into the pickup queue instead, and
+        // IN_STORE is rejected by the Orders API, so no fulfillment is sent.
+        ticket_name: `Table ${tableNumber}`,
         state: "OPEN",
         source: { name: "Table Ordering" },
         line_items: lines.map((line) => ({
@@ -308,19 +313,6 @@ export async function createOrder(
           quantity: String(line.quantity),
           name: line.name,
         })),
-        fulfillments: [
-          {
-            type: "PICKUP",
-            state: "PROPOSED",
-            pickup_details: {
-              recipient: { display_name: `Table ${tableNumber}` },
-              schedule_type: "ASAP",
-              // Must be the real current timestamp; future dates hide orders
-              // behind the Square dashboard's default date filter.
-              pickup_at: new Date().toISOString(),
-            },
-          },
-        ],
       },
     },
   });
