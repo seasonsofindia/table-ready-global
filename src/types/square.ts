@@ -80,12 +80,12 @@ export interface OrderPayload {
 export const TABLE_NUMBERS = Array.from({ length: 16 }, (_, i) => i + 1);
 
 export function tableReferenceId(tableNumber: number): string {
-  return `Table-${tableNumber}`;
+  return `Dining-${tableNumber}`;
 }
 
 export function parseTableNumber(referenceId: string | null | undefined): number | null {
   if (!referenceId) return null;
-  const match = /^Table-(\d+)$/.exec(referenceId);
+  const match = /^(?:Table|Dining)-(\d+)$/.exec(referenceId);
   return match ? Number(match[1]) : null;
 }
 

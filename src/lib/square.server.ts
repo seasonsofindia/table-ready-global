@@ -210,6 +210,7 @@ interface SquareOrder {
   version?: number;
   reference_id?: string;
   location_id?: string;
+  channel_id?: string;
   created_at?: string;
   updated_at?: string;
   total_money?: CatalogMoney;
@@ -300,14 +301,15 @@ export async function createOrder(
       idempotency_key: crypto.randomUUID(),
       order: {
         location_id: locationId,
+        channel_id: locationId,
         reference_id: tableReferenceId(tableNumber),
         // Dine-in orders surface in the Square Dashboard / POS open-ticket list
         // through ticket_name, the same way POS-created dine-in tickets do.
         // A PICKUP fulfillment routed them into the pickup queue instead, and
         // IN_STORE is rejected by the Orders API, so no fulfillment is sent.
-        ticket_name: `Table ${tableNumber}`,
+        ticket_name: `Dining ${tableNumber}`,
         state: "OPEN",
-        source: { name: "Table Ordering" },
+        source: { name: "Point of Sale" },
         line_items: lines.map((line) => ({
           catalog_object_id: line.catalogObjectId,
           quantity: String(line.quantity),

@@ -30,7 +30,7 @@ export function TableSelector({ value, onChange }: TableSelectorProps) {
         <SelectContent>
           {TABLE_NUMBERS.map((table) => (
             <SelectItem key={table} value={String(table)} className="h-12 text-base">
-              Table {table}
+              Dining {table}
             </SelectItem>
           ))}
         </SelectContent>

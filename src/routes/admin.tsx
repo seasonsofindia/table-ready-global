@@ -125,7 +125,7 @@ function AdminContent() {
     const perTable = new Map<string, number>();
     const perItem = new Map<string, number>();
     for (const order of orders) {
-      const key = order.tableNumber ? `Table ${order.tableNumber}` : "Other";
+      const key = order.tableNumber ? `Dining ${order.tableNumber}` : "Other";
       perTable.set(key, (perTable.get(key) ?? 0) + 1);
       for (const line of order.lineItems) {
         const quantity = Number(line.quantity) || 0;
@@ -194,7 +194,7 @@ function AdminContent() {
               <li key={order.id} className="flex items-center justify-between gap-3 p-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
-                    {order.tableNumber ? `Table ${order.tableNumber}` : (order.referenceId ?? "—")}
+                    {order.tableNumber ? `Dining ${order.tableNumber}` : (order.referenceId ?? "—")}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {order.lineItems.map((l) => `${l.quantity}× ${l.name}`).join(", ") || "No items"}
@@ -214,7 +214,7 @@ function AdminContent() {
 
       <section className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border bg-card p-4 shadow-sm">
-          <h2 className="text-lg font-semibold">Orders per table</h2>
+          <h2 className="text-lg font-semibold">Orders per dining</h2>
           <ul className="mt-2 space-y-1 text-sm">
             {analytics.perTable.map(([label, count]) => (
               <li key={label} className="flex justify-between">
