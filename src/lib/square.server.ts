@@ -303,15 +303,15 @@ export async function createOrder(
         location_id: locationId,
         reference_id: tableReferenceId(tableNumber),
         // A fulfillment is required for Square to route the order to a device
-        // and print an order ticket. RESERVED = already accepted, so the
-        // ticket prints immediately instead of waiting in "pending".
+        // and print an order ticket. Square only accepts PROPOSED/HELD at
+        // creation, so we create PROPOSED then accept it (RESERVED) below.
         ticket_name: `Table ${tableNumber}`,
         state: "OPEN",
         source: { name: "Table Ordering" },
         fulfillments: [
           {
             type: "PICKUP",
-            state: "RESERVED",
+            state: "PROPOSED",
             pickup_details: {
               recipient: { display_name: `Table ${tableNumber}` },
               schedule_type: "ASAP",
@@ -329,8 +329,34 @@ export async function createOrder(
     },
   });
 
-  return toOrderSummary(result.order);
+  // Accept the fulfillment so the ticket prints instead of sitting pending.
+  const created = result.order;
+  const fulfillmentUid = created.fulfillments?.[0]?.uid;
+  if (fulfillmentUid) {
+    try {
+      const accepted = await squareFetch<{ order: SquareOrder }>(
+        `/v2/orders/${encodeURIComponent(created.id)}`,
+        {
+          method: "PUT",
+          body: {
+            idempotency_key: crypto.randomUUID(),
+            order: {
+              location_id: locationId,
+              version: created.version,
+              fulfillments: [{ uid: fulfillmentUid, state: "RESERVED" }],
+            },
+          },
+        },
+      );
+      return toOrderSummary(accepted.order);
+    } catch {
+      // Non-fatal: order exists even if acceptance fails.
+    }
+  }
+
+  return toOrderSummary(created);
 }
+
 
 export async function appendLinesToOrder(
   orderId: string,
