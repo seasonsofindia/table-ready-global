@@ -174,11 +174,18 @@ function OrderScreen() {
             Your table to the kitchen
           </p>
         </div>
-        <Button asChild variant="ghost" size="icon" className="size-11">
-          <Link to="/admin" aria-label="Admin">
-            <Settings2 className="size-5" />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="sm" className="h-11">
+            <Link to="/kds" aria-label="Kitchen display">
+              Kitchen
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" size="icon" className="size-11">
+            <Link to="/admin" aria-label="Admin">
+              <Settings2 className="size-5" />
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_22rem]">

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as KdsRouteImport } from './routes/kds'
 import { Route as ApiPublicSquareWebhookRouteImport } from './routes/api/public/square-webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KdsRoute = KdsRouteImport.update({
+  id: '/kds',
+  path: '/kds',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSquareWebhookRoute = ApiPublicSquareWebhookRouteImport.update({
   id: '/api/public/square-webhook',
   path: '/api/public/square-webhook',
@@ -32,30 +38,34 @@ const ApiPublicSquareWebhookRoute = ApiPublicSquareWebhookRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/kds': typeof KdsRoute
   '/api/public/square-webhook': typeof ApiPublicSquareWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/kds': typeof KdsRoute
   '/api/public/square-webhook': typeof ApiPublicSquareWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/kds': typeof KdsRoute
   '/api/public/square-webhook': typeof ApiPublicSquareWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/api/public/square-webhook'
+  fullPaths: '/' | '/admin' | '/kds' | '/api/public/square-webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/api/public/square-webhook'
-  id: '__root__' | '/' | '/admin' | '/api/public/square-webhook'
+  to: '/' | '/admin' | '/kds' | '/api/public/square-webhook'
+  id: '__root__' | '/' | '/admin' | '/kds' | '/api/public/square-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  KdsRoute: typeof KdsRoute
   ApiPublicSquareWebhookRoute: typeof ApiPublicSquareWebhookRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/kds': {
+      id: '/kds'
+      path: '/kds'
+      fullPath: '/kds'
+      preLoaderRoute: typeof KdsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/square-webhook': {
       id: '/api/public/square-webhook'
       path: '/api/public/square-webhook'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  KdsRoute: KdsRoute,
   ApiPublicSquareWebhookRoute: ApiPublicSquareWebhookRoute,
 }
 export const routeTree = rootRouteImport

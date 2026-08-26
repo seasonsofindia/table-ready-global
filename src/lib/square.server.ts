@@ -211,6 +211,8 @@ interface SquareOrder {
   reference_id?: string;
   location_id?: string;
   channel_id?: string;
+  ticket_name?: string;
+  source?: { name?: string };
   created_at?: string;
   updated_at?: string;
   total_money?: CatalogMoney;
@@ -218,6 +220,7 @@ interface SquareOrder {
     uid?: string;
     name?: string;
     quantity?: string;
+    note?: string;
     catalog_object_id?: string;
     total_money?: CatalogMoney;
   }[];
@@ -230,11 +233,12 @@ export function toOrderSummary(order: SquareOrder): OrderSummary {
     state: (order.state as OrderSummary["state"]) ?? "OPEN",
     version: order.version ?? 0,
     referenceId: order.reference_id ?? null,
-    tableNumber: parseTableNumber(order.reference_id),
+    tableNumber: parseTableNumber(order.reference_id) ?? parseTableNumber(order.ticket_name),
     totalAmount: typeof order.total_money?.amount === "number" ? order.total_money.amount : null,
     currency: order.total_money?.currency ?? "USD",
     createdAt: order.created_at ?? null,
     updatedAt: order.updated_at ?? null,
+    sourceName: order.source?.name ?? null,
     lineItems: (order.line_items ?? []).map((line) => ({
       uid: line.uid ?? null,
       name: line.name ?? "Item",
@@ -242,6 +246,7 @@ export function toOrderSummary(order: SquareOrder): OrderSummary {
       catalogObjectId: line.catalog_object_id ?? null,
       totalAmount: typeof line.total_money?.amount === "number" ? line.total_money.amount : null,
       currency: line.total_money?.currency ?? "USD",
+      note: line.note ?? null,
     })),
   };
 }
