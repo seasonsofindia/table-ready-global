@@ -45,6 +45,7 @@ export interface OrderLine {
   catalogObjectId: string | null;
   totalAmount: number | null;
   currency: string;
+  note?: string | null;
 }
 
 export type OrderState = "OPEN" | "COMPLETED" | "CANCELED" | "DRAFT";
@@ -59,6 +60,7 @@ export interface OrderSummary {
   currency: string;
   createdAt: string | null;
   updatedAt: string | null;
+  sourceName?: string | null;
   lineItems: OrderLine[];
 }
 
