@@ -41,12 +41,17 @@ function AdminScreen() {
           <h1 className="text-3xl font-bold tracking-tight">Admin</h1>
           <p className="mt-1 text-sm text-muted-foreground">Staff only</p>
         </div>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/">
-            <ArrowLeft className="mr-1 size-4" />
-            Ordering
-          </Link>
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/kds">Kitchen display</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/">
+              <ArrowLeft className="mr-1 size-4" />
+              Ordering
+            </Link>
+          </Button>
+        </div>
       </header>
 
       {unlocked ? <AdminContent /> : <PinGate onUnlock={() => setUnlocked(true)} />}
