@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState } from "react";
 import { ChefHat, Loader2, RefreshCw, Settings2, UtensilsCrossed } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -48,13 +49,31 @@ function sourceVariant(order: OrderSummary) {
   return "outline" as const;
 }
 
+const REFRESH_MODE_KEY = "kds-refresh-mode";
+
 function KitchenScreen() {
   const kitchenFn = useServerFn(getKitchenOrders);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(REFRESH_MODE_KEY);
+    if (stored === "manual") setAutoRefresh(false);
+  }, []);
+
+  const toggleRefresh = () => {
+    setAutoRefresh((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(REFRESH_MODE_KEY, next ? "auto" : "manual");
+      return next;
+    });
+  };
 
   const ordersQuery = useQuery({
     queryKey: ["kitchen-orders"],
     queryFn: () => kitchenFn({ data: { hours: 12 } }),
-    refetchInterval: 30_000,
+    refetchInterval: autoRefresh ? 30_000 : false,
+    refetchOnWindowFocus: autoRefresh,
+    refetchOnReconnect: autoRefresh,
     retry: false,
   });
 
