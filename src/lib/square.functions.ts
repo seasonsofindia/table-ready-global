@@ -64,6 +64,14 @@ export const getRecentOrders = createServerFn({ method: "POST" })
     return { orders };
   });
 
+export const getKitchenOrders = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ hours: z.number().int().min(1).max(72) }).parse(input))
+  .handler(async ({ data }) => {
+    const orders = await listKitchenOrders(data.hours);
+    return { orders };
+  });
+
+
 export const checkAdminPin = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ pin: z.string().min(1).max(32) }).parse(input))
   .handler(async ({ data }) => {
