@@ -472,6 +472,13 @@ export async function listRecentOrders(hours: number): Promise<OrderSummary[]> {
   return orders.map(toOrderSummary);
 }
 
+/** Open orders only — the KDS feed. One SearchOrders call. */
+export async function listKitchenOrders(hours: number): Promise<OrderSummary[]> {
+  const orders = await searchOrders({ states: ["OPEN"], sinceHours: hours });
+  return orders.map(toOrderSummary);
+}
+
+
 export function verifyAdminPin(pin: string): boolean {
   const expected = process.env["ADMIN_PIN"];
   if (!expected) return false;
