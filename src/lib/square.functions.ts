@@ -7,9 +7,11 @@ import {
   createOrder,
   fetchMenu,
   findOpenOrderForTable,
+  listKitchenOrders,
   listRecentOrders,
   verifyAdminPin,
 } from "./square.server";
+
 
 const lineSchema = z.object({
   catalogObjectId: z.string().min(1).max(192),
@@ -61,6 +63,14 @@ export const getRecentOrders = createServerFn({ method: "POST" })
     const orders = await listRecentOrders(data.hours);
     return { orders };
   });
+
+export const getKitchenOrders = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ hours: z.number().int().min(1).max(72) }).parse(input))
+  .handler(async ({ data }) => {
+    const orders = await listKitchenOrders(data.hours);
+    return { orders };
+  });
+
 
 export const checkAdminPin = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ pin: z.string().min(1).max(32) }).parse(input))

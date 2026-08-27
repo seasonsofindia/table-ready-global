@@ -209,11 +209,14 @@ interface SquareOrder {
   state?: string;
   version?: number;
   reference_id?: string;
+  ticket_name?: string;
   location_id?: string;
   channel_id?: string;
   created_at?: string;
   updated_at?: string;
   total_money?: CatalogMoney;
+  metadata?: Record<string, string>;
+  source?: { name?: string };
   line_items?: {
     uid?: string;
     name?: string;
@@ -221,10 +224,20 @@ interface SquareOrder {
     catalog_object_id?: string;
     total_money?: CatalogMoney;
   }[];
-  fulfillments?: { uid?: string; state?: string; type?: string }[];
+  fulfillments?: {
+    uid?: string;
+    state?: string;
+    type?: string;
+    pickup_details?: { recipient?: { display_name?: string } };
+    delivery_details?: { recipient?: { display_name?: string } };
+  }[];
 }
 
 export function toOrderSummary(order: SquareOrder): OrderSummary {
+  const recipient = (order.fulfillments ?? [])
+    .map((f) => f.pickup_details?.recipient?.display_name ?? f.delivery_details?.recipient?.display_name)
+    .find((name) => Boolean(name));
+
   return {
     id: order.id,
     state: (order.state as OrderSummary["state"]) ?? "OPEN",
@@ -235,6 +248,10 @@ export function toOrderSummary(order: SquareOrder): OrderSummary {
     currency: order.total_money?.currency ?? "USD",
     createdAt: order.created_at ?? null,
     updatedAt: order.updated_at ?? null,
+    ticketName: order.ticket_name ?? null,
+    customerName: recipient ?? null,
+    sourceName: order.source?.name ?? null,
+    metadata: order.metadata ?? {},
     lineItems: (order.line_items ?? []).map((line) => ({
       uid: line.uid ?? null,
       name: line.name ?? "Item",
@@ -245,6 +262,7 @@ export function toOrderSummary(order: SquareOrder): OrderSummary {
     })),
   };
 }
+
 
 export async function searchOrders(options: {
   states: string[];
@@ -453,6 +471,13 @@ export async function listRecentOrders(hours: number): Promise<OrderSummary[]> {
   });
   return orders.map(toOrderSummary);
 }
+
+/** Open orders only — the KDS feed. One SearchOrders call. */
+export async function listKitchenOrders(hours: number): Promise<OrderSummary[]> {
+  const orders = await searchOrders({ states: ["OPEN"], sinceHours: hours });
+  return orders.map(toOrderSummary);
+}
+
 
 export function verifyAdminPin(pin: string): boolean {
   const expected = process.env["ADMIN_PIN"];

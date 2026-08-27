@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as OrderRouteImport } from './routes/order'
 import { Route as ApiPublicSquareWebhookRouteImport } from './routes/api/public/square-webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrderRoute = OrderRouteImport.update({
+  id: '/order',
+  path: '/order',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSquareWebhookRoute = ApiPublicSquareWebhookRouteImport.update({
   id: '/api/public/square-webhook',
   path: '/api/public/square-webhook',
@@ -32,30 +38,34 @@ const ApiPublicSquareWebhookRoute = ApiPublicSquareWebhookRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/order': typeof OrderRoute
   '/api/public/square-webhook': typeof ApiPublicSquareWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/order': typeof OrderRoute
   '/api/public/square-webhook': typeof ApiPublicSquareWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/order': typeof OrderRoute
   '/api/public/square-webhook': typeof ApiPublicSquareWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/api/public/square-webhook'
+  fullPaths: '/' | '/admin' | '/order' | '/api/public/square-webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/api/public/square-webhook'
-  id: '__root__' | '/' | '/admin' | '/api/public/square-webhook'
+  to: '/' | '/admin' | '/order' | '/api/public/square-webhook'
+  id: '__root__' | '/' | '/admin' | '/order' | '/api/public/square-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  OrderRoute: typeof OrderRoute
   ApiPublicSquareWebhookRoute: typeof ApiPublicSquareWebhookRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/order': {
+      id: '/order'
+      path: '/order'
+      fullPath: '/order'
+      preLoaderRoute: typeof OrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/square-webhook': {
       id: '/api/public/square-webhook'
       path: '/api/public/square-webhook'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  OrderRoute: OrderRoute,
   ApiPublicSquareWebhookRoute: ApiPublicSquareWebhookRoute,
 }
 export const routeTree = rootRouteImport
