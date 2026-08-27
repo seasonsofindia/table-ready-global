@@ -49,6 +49,8 @@ export interface OrderLine {
 
 export type OrderState = "OPEN" | "COMPLETED" | "CANCELED" | "DRAFT";
 
+export type OrderSourceKind = "POS" | "ONLINE" | "APP" | "OTHER";
+
 export interface OrderSummary {
   id: string;
   state: OrderState;
@@ -60,7 +62,46 @@ export interface OrderSummary {
   createdAt: string | null;
   updatedAt: string | null;
   lineItems: OrderLine[];
+  ticketName: string | null;
+  customerName: string | null;
+  sourceName: string | null;
+  metadata: Record<string, string>;
 }
+
+export const APP_SOURCE_NAME = "Table Ordering";
+
+export function orderSourceKind(order: OrderSummary): OrderSourceKind {
+  const source = (order.sourceName ?? "").toLowerCase();
+  if (!source) return "OTHER";
+  if (source === APP_SOURCE_NAME.toLowerCase()) return "APP";
+  if (source.includes("point of sale") || source.includes("restaurants") || source === "square")
+    return "POS";
+  if (
+    source.includes("online") ||
+    source.includes("checkout") ||
+    source.includes("website") ||
+    source.includes("ecom") ||
+    source.includes("delivery")
+  )
+    return "ONLINE";
+  return "OTHER";
+}
+
+export function orderSourceLabel(order: OrderSummary): string {
+  const kind = orderSourceKind(order);
+  if (kind === "POS") return "POS";
+  if (kind === "ONLINE") return "Online";
+  if (kind === "APP") return "App";
+  return order.sourceName ?? "Other";
+}
+
+export function orderDisplayName(order: OrderSummary): string {
+  if (order.ticketName) return order.ticketName;
+  if (order.customerName) return order.customerName;
+  if (order.tableNumber !== null) return `Table ${order.tableNumber}`;
+  return `#${order.id.slice(-5).toUpperCase()}`;
+}
+
 
 export interface OrderResponse {
   order: OrderSummary;
