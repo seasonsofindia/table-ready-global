@@ -73,6 +73,21 @@ export const getKitchenOrders = createServerFn({ method: "POST" })
   });
 
 
+export const updateOrderService = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        orderId: z.string().min(1).max(192),
+        servedTokens: z.array(z.string().min(1).max(32)).max(200),
+        fulfilled: z.boolean(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const order = await setOrderService(data);
+    return { order };
+  });
+
 export const checkAdminPin = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ pin: z.string().min(1).max(32) }).parse(input))
   .handler(async ({ data }) => {
