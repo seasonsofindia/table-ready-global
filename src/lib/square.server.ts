@@ -1,5 +1,10 @@
 import type { Menu, MenuCategory, MenuItem, MenuVariation, OrderSummary } from "@/types/square";
-import { parseTableNumber, tableReferenceId } from "@/types/square";
+import {
+  FULFILLED_META_KEY,
+  parseTableNumber,
+  serializeServedTokens,
+  tableReferenceId,
+} from "@/types/square";
 
 export const SQUARE_VERSION = "2025-07-16";
 

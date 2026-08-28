@@ -9,6 +9,7 @@ import {
   findOpenOrderForTable,
   listKitchenOrders,
   listRecentOrders,
+  setOrderService,
   verifyAdminPin,
 } from "./square.server";
 
