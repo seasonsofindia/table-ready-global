@@ -1,5 +1,10 @@
 import type { Menu, MenuCategory, MenuItem, MenuVariation, OrderSummary } from "@/types/square";
-import { parseTableNumber, tableReferenceId } from "@/types/square";
+import {
+  FULFILLED_META_KEY,
+  parseTableNumber,
+  serializeServedTokens,
+  tableReferenceId,
+} from "@/types/square";
 
 export const SQUARE_VERSION = "2025-07-16";
 
@@ -470,6 +475,40 @@ export async function listRecentOrders(hours: number): Promise<OrderSummary[]> {
     sinceHours: hours,
   });
   return orders.map(toOrderSummary);
+}
+
+/**
+ * Writes KDS service state into order metadata only. Payment, state and
+ * fulfillments are untouched. One retrieve + one update call.
+ */
+export async function setOrderService(input: {
+  orderId: string;
+  servedTokens: string[];
+  fulfilled: boolean;
+}): Promise<OrderSummary> {
+  const { locationId } = getSquareConfig();
+  const current = await retrieveOrder(input.orderId);
+
+  const metadata: Record<string, string> = {
+    ...serializeServedTokens(input.servedTokens),
+    [FULFILLED_META_KEY]: input.fulfilled ? new Date().toISOString() : "",
+  };
+
+  const result = await squareFetch<{ order: SquareOrder }>(
+    `/v2/orders/${encodeURIComponent(input.orderId)}`,
+    {
+      method: "PUT",
+      body: {
+        idempotency_key: crypto.randomUUID(),
+        order: {
+          location_id: current.location_id ?? locationId,
+          version: current.version,
+          metadata,
+        },
+      },
+    },
+  );
+  return toOrderSummary(result.order);
 }
 
 /** Open orders only — the KDS feed. One SearchOrders call. */
