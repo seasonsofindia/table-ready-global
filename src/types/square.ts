@@ -103,6 +103,69 @@ export function orderDisplayName(order: OrderSummary): string {
 }
 
 
+/* ------------------------- KDS service state ---------------------------- */
+
+export const SERVED_META_PREFIX = "kds_served_";
+export const SERVED_META_CHUNKS = 4;
+export const FULFILLED_META_KEY = "kds_fulfilled_at";
+
+/** Compact, stable token for a line item so many fit in a 255-char value. */
+export function lineToken(line: OrderLine, index: number): string {
+  return line.uid ? line.uid.slice(0, 8) : `i${index}`;
+}
+
+export function parseServedTokens(metadata: Record<string, string>): Set<string> {
+  const parts: string[] = [];
+  for (let i = 1; i <= SERVED_META_CHUNKS; i += 1) {
+    const value = metadata[`${SERVED_META_PREFIX}${i}`];
+    if (value) parts.push(value);
+  }
+  return new Set(parts.join(",").split(",").filter(Boolean));
+}
+
+/** Splits tokens into 255-char metadata chunks; extra tokens are dropped. */
+export function serializeServedTokens(tokens: string[]): Record<string, string> {
+  const chunks: string[] = [];
+  let current = "";
+  for (const token of tokens) {
+    const next = current ? `${current},${token}` : token;
+    if (next.length > 255) {
+      if (chunks.length + 1 >= SERVED_META_CHUNKS && current) {
+        chunks.push(current);
+        current = "";
+        break;
+      }
+      chunks.push(current);
+      current = token;
+    } else {
+      current = next;
+    }
+  }
+  if (current) chunks.push(current);
+
+  const out: Record<string, string> = {};
+  for (let i = 1; i <= SERVED_META_CHUNKS; i += 1) {
+    out[`${SERVED_META_PREFIX}${i}`] = chunks[i - 1] ?? "";
+  }
+  return out;
+}
+
+export type ServiceStatus = "NEW" | "PARTIAL" | "SERVED";
+
+export function servedCount(order: OrderSummary): number {
+  const served = parseServedTokens(order.metadata);
+  return order.lineItems.filter((line, index) => served.has(lineToken(line, index))).length;
+}
+
+export function isServiceFulfilled(order: OrderSummary): boolean {
+  return Boolean(order.metadata[FULFILLED_META_KEY]);
+}
+
+export function serviceStatus(order: OrderSummary): ServiceStatus {
+  if (isServiceFulfilled(order)) return "SERVED";
+  return servedCount(order) > 0 ? "PARTIAL" : "NEW";
+}
+
 export interface OrderResponse {
   order: OrderSummary;
 }
