@@ -291,14 +291,16 @@ function OrderCard({
         : "bg-card";
 
   return (
-    <article className={`rounded-xl border p-4 shadow-sm ${cardTone}`}>
+    <article className={`rounded-xl border p-5 shadow-sm text-base ${cardTone}`}>
       <div className="flex items-start justify-between gap-2">
-        <h2 className="min-w-0 text-2xl font-bold leading-tight tracking-tight">
+        <h2 className="min-w-0 text-3xl font-bold leading-tight tracking-tight">
           {orderDisplayName(order)}
         </h2>
-        <Badge variant={sourceVariant(order)}>{orderSourceLabel(order)}</Badge>
+        <Badge variant={sourceVariant(order)} className="text-sm h-6">
+          {orderSourceLabel(order)}
+        </Badge>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-1 text-sm text-muted-foreground">
         {elapsed(order.createdAt)}
         {order.tableNumber !== null ? ` · Table ${order.tableNumber}` : ""}
       </p>
@@ -306,6 +308,7 @@ function OrderCard({
       <div className="mt-2 flex items-center justify-between gap-2">
         <Badge
           variant={status === "SERVED" ? "default" : status === "PARTIAL" ? "secondary" : "outline"}
+          className="text-sm h-6"
         >
           {status === "SERVED"
             ? "Served"
@@ -315,7 +318,7 @@ function OrderCard({
                 ? "Partially served"
                 : "New"}
         </Badge>
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-sm font-medium text-muted-foreground">
           {done} of {total} items served
         </span>
       </div>
@@ -331,14 +334,14 @@ function OrderCard({
                 aria-pressed={checked}
                 disabled={busy}
                 onClick={() => onToggleItem(token)}
-                className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm transition-colors hover:bg-accent disabled:opacity-60"
+                className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-base transition-colors hover:bg-accent disabled:opacity-60"
               >
                 <span
-                  className={`flex size-5 shrink-0 items-center justify-center rounded border ${
+                  className={`flex size-6 shrink-0 items-center justify-center rounded border ${
                     checked ? "border-primary bg-primary text-primary-foreground" : "border-input"
                   }`}
                 >
-                  {checked ? <Check className="size-3.5" /> : null}
+                  {checked ? <Check className="size-4" /> : null}
                 </span>
                 <span
                   className={`min-w-0 flex-1 truncate ${
@@ -347,7 +350,7 @@ function OrderCard({
                 >
                   {line.quantity} × {line.name}
                 </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
+                <span className="shrink-0 text-sm text-muted-foreground">
                   {formatMoney(line.totalAmount, line.currency)}
                 </span>
               </button>
@@ -356,7 +359,7 @@ function OrderCard({
         })}
       </ul>
 
-      <div className="mt-3 flex justify-between border-t pt-3 text-sm font-semibold">
+      <div className="mt-3 flex justify-between border-t pt-3 text-base font-semibold">
         <span>Total</span>
         <span>{formatMoney(order.totalAmount, order.currency)}</span>
       </div>
@@ -371,7 +374,7 @@ function OrderCard({
           {allDone ? "Mark as served" : `Check all items (${done}/${total})`}
         </Button>
       )}
-      <p className="mt-2 text-center text-[11px] text-muted-foreground">
+      <p className="mt-2 text-center text-xs text-muted-foreground">
         Service status only — payment is unchanged in Square.
       </p>
     </article>
