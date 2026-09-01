@@ -72,6 +72,7 @@ function KitchenScreen() {
   const serviceFn = useServerFn(updateOrderService);
   const queryClient = useQueryClient();
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [showOptions, setShowOptions] = useState(false);
   const [tab, setTab] = useState<"active" | "served">("active");
 
   useEffect(() => {
