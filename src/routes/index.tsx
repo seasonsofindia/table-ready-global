@@ -293,7 +293,13 @@ function OrderCard({
         <Badge
           variant={status === "SERVED" ? "default" : status === "PARTIAL" ? "secondary" : "outline"}
         >
-          {status === "SERVED" ? "Served" : status === "PARTIAL" ? "Partially served" : "New"}
+          {status === "SERVED"
+            ? "Served"
+            : allDone
+              ? "Ready to close"
+              : status === "PARTIAL"
+                ? "Partially served"
+                : "New"}
         </Badge>
         <span className="text-xs font-medium text-muted-foreground">
           {done} of {total} items served
