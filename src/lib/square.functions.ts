@@ -84,8 +84,13 @@ export const updateOrderService = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const order = await setOrderService(data);
-    return { order };
+    try {
+      const order = await setOrderService(data);
+      return { order };
+    } catch (error) {
+      console.error("[kds] setOrderService failed", JSON.stringify(data), error);
+      throw error;
+    }
   });
 
 export const checkAdminPin = createServerFn({ method: "POST" })

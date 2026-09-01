@@ -1,5 +1,6 @@
 import type { Menu, MenuCategory, MenuItem, MenuVariation, OrderSummary } from "@/types/square";
 import {
+  EMPTY_META_VALUE,
   FULFILLED_META_KEY,
   parseTableNumber,
   serializeServedTokens,
@@ -72,7 +73,7 @@ export async function squareFetch<T>(
     const errors = (payload["errors"] as SquareError[] | undefined) ?? [];
     const first = errors[0];
     throw new SquareApiError(
-      first?.detail ?? `Square request failed (${response.status})`,
+      `${first?.detail ?? `Square request failed (${response.status})`}${first?.field ? ` [${first.field}]` : ""}${first?.code ? ` (${first.code})` : ""}`,
       response.status,
       first?.code,
     );
@@ -489,10 +490,16 @@ export async function setOrderService(input: {
   const { locationId } = getSquareConfig();
   const current = await retrieveOrder(input.orderId);
 
-  const metadata: Record<string, string> = {
+  const desired: Record<string, string> = {
     ...serializeServedTokens(input.servedTokens),
-    [FULFILLED_META_KEY]: input.fulfilled ? new Date().toISOString() : "",
+    [FULFILLED_META_KEY]: input.fulfilled ? new Date().toISOString() : EMPTY_META_VALUE,
   };
+
+  // Square rejects empty metadata values, so cleared keys carry a sentinel.
+  const metadata: Record<string, string> = {};
+  for (const [key, value] of Object.entries(desired)) {
+    metadata[key] = value || EMPTY_META_VALUE;
+  }
 
   const result = await squareFetch<{ order: SquareOrder }>(
     `/v2/orders/${encodeURIComponent(input.orderId)}`,

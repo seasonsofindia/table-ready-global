@@ -108,6 +108,8 @@ export function orderDisplayName(order: OrderSummary): string {
 export const SERVED_META_PREFIX = "kds_served_";
 export const SERVED_META_CHUNKS = 4;
 export const FULFILLED_META_KEY = "kds_fulfilled_at";
+/** Square rejects empty metadata values, so cleared keys use this sentinel. */
+export const EMPTY_META_VALUE = "-";
 
 /** Compact, stable token for a line item so many fit in a 255-char value. */
 export function lineToken(line: OrderLine, index: number): string {
@@ -120,7 +122,7 @@ export function parseServedTokens(metadata: Record<string, string>): Set<string>
     const value = metadata[`${SERVED_META_PREFIX}${i}`];
     if (value) parts.push(value);
   }
-  return new Set(parts.join(",").split(",").filter(Boolean));
+  return new Set(parts.join(",").split(",").filter((t) => t && t !== EMPTY_META_VALUE));
 }
 
 /** Splits tokens into 255-char metadata chunks; extra tokens are dropped. */
@@ -145,7 +147,7 @@ export function serializeServedTokens(tokens: string[]): Record<string, string> 
 
   const out: Record<string, string> = {};
   for (let i = 1; i <= SERVED_META_CHUNKS; i += 1) {
-    out[`${SERVED_META_PREFIX}${i}`] = chunks[i - 1] ?? "";
+    out[`${SERVED_META_PREFIX}${i}`] = chunks[i - 1] ?? EMPTY_META_VALUE;
   }
   return out;
 }
@@ -158,7 +160,8 @@ export function servedCount(order: OrderSummary): number {
 }
 
 export function isServiceFulfilled(order: OrderSummary): boolean {
-  return Boolean(order.metadata[FULFILLED_META_KEY]);
+  const value = order.metadata[FULFILLED_META_KEY];
+  return Boolean(value) && value !== EMPTY_META_VALUE;
 }
 
 export function serviceStatus(order: OrderSummary): ServiceStatus {
