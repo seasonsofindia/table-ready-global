@@ -489,10 +489,19 @@ export async function setOrderService(input: {
   const { locationId } = getSquareConfig();
   const current = await retrieveOrder(input.orderId);
 
-  const metadata: Record<string, string> = {
+  const desired: Record<string, string> = {
     ...serializeServedTokens(input.servedTokens),
     [FULFILLED_META_KEY]: input.fulfilled ? new Date().toISOString() : "",
   };
+
+  // Square rejects empty metadata values — send only real values and clear the
+  // rest through fields_to_clear.
+  const metadata: Record<string, string> = {};
+  const fieldsToClear: string[] = [];
+  for (const [key, value] of Object.entries(desired)) {
+    if (value) metadata[key] = value;
+    else if (current.metadata?.[key]) fieldsToClear.push(`metadata.${key}`);
+  }
 
   const result = await squareFetch<{ order: SquareOrder }>(
     `/v2/orders/${encodeURIComponent(input.orderId)}`,
@@ -500,10 +509,11 @@ export async function setOrderService(input: {
       method: "PUT",
       body: {
         idempotency_key: crypto.randomUUID(),
+        ...(fieldsToClear.length > 0 ? { fields_to_clear: fieldsToClear } : {}),
         order: {
           location_id: current.location_id ?? locationId,
           version: current.version,
-          metadata,
+          ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
         },
       },
     },
