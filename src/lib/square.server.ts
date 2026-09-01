@@ -1,5 +1,6 @@
 import type { Menu, MenuCategory, MenuItem, MenuVariation, OrderSummary } from "@/types/square";
 import {
+  EMPTY_META_VALUE,
   FULFILLED_META_KEY,
   parseTableNumber,
   serializeServedTokens,
@@ -491,16 +492,13 @@ export async function setOrderService(input: {
 
   const desired: Record<string, string> = {
     ...serializeServedTokens(input.servedTokens),
-    [FULFILLED_META_KEY]: input.fulfilled ? new Date().toISOString() : "",
+    [FULFILLED_META_KEY]: input.fulfilled ? new Date().toISOString() : EMPTY_META_VALUE,
   };
 
-  // Square rejects empty metadata values — send only real values and clear the
-  // rest through fields_to_clear.
+  // Square rejects empty metadata values, so cleared keys carry a sentinel.
   const metadata: Record<string, string> = {};
-  const fieldsToClear: string[] = [];
   for (const [key, value] of Object.entries(desired)) {
-    if (value) metadata[key] = value;
-    else if (current.metadata?.[key]) fieldsToClear.push(`metadata.${key}`);
+    metadata[key] = value || EMPTY_META_VALUE;
   }
 
   const result = await squareFetch<{ order: SquareOrder }>(
@@ -509,11 +507,10 @@ export async function setOrderService(input: {
       method: "PUT",
       body: {
         idempotency_key: crypto.randomUUID(),
-        ...(fieldsToClear.length > 0 ? { fields_to_clear: fieldsToClear } : {}),
         order: {
           location_id: current.location_id ?? locationId,
           version: current.version,
-          ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+          metadata,
         },
       },
     },
