@@ -148,42 +148,55 @@ function KitchenScreen() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-            <ChefHat className="size-7 text-primary" />
-            Kitchen Display
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {activeOrders.length} active · {servedOrders.length} served
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant={autoRefresh ? "secondary" : "outline"} size="sm" className="h-11" onClick={toggleRefresh}>
-            {autoRefresh ? "Auto refresh" : "Manual refresh"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-11"
-            disabled={ordersQuery.isFetching}
-            onClick={() => void ordersQuery.refetch()}
-          >
-            <RefreshCw className={`mr-1 size-4 ${ordersQuery.isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Button asChild variant="ghost" size="icon" className="size-11">
-            <Link to="/order" aria-label="New order">
-              <UtensilsCrossed className="size-5" />
-            </Link>
-          </Button>
-          <Button asChild variant="ghost" size="icon" className="size-11">
-            <Link to="/admin" aria-label="Admin">
-              <Settings2 className="size-5" />
-            </Link>
-          </Button>
-        </div>
+      <header className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-11"
+          disabled={ordersQuery.isFetching}
+          onClick={() => void ordersQuery.refetch()}
+        >
+          <RefreshCw className={`mr-1 size-4 ${ordersQuery.isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-11"
+          onClick={() => setShowOptions((v) => !v)}
+        >
+          {showOptions ? "Hide options" : "Show options"}
+        </Button>
       </header>
+
+      {showOptions && (
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3 rounded-xl border bg-muted/30 p-3">
+          <div>
+            <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+              <ChefHat className="size-6 text-primary" />
+              Kitchen Display
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {activeOrders.length} active · {servedOrders.length} served
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant={autoRefresh ? "secondary" : "outline"} size="sm" className="h-11" onClick={toggleRefresh}>
+              {autoRefresh ? "Auto refresh" : "Manual refresh"}
+            </Button>
+            <Button asChild variant="ghost" size="icon" className="size-11">
+              <Link to="/order" aria-label="New order">
+                <UtensilsCrossed className="size-5" />
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" size="icon" className="size-11">
+              <Link to="/admin" aria-label="Admin">
+                <Settings2 className="size-5" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 inline-flex rounded-lg border bg-muted/40 p-1" role="tablist">
         <button
