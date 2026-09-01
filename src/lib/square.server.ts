@@ -72,7 +72,7 @@ export async function squareFetch<T>(
     const errors = (payload["errors"] as SquareError[] | undefined) ?? [];
     const first = errors[0];
     throw new SquareApiError(
-      first?.detail ?? `Square request failed (${response.status})`,
+      `${first?.detail ?? `Square request failed (${response.status})`}${first?.field ? ` [${first.field}]` : ""}${first?.code ? ` (${first.code})` : ""}`,
       response.status,
       first?.code,
     );
