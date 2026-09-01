@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getKitchenOrders, updateOrderService } from "@/lib/square.functions";
 import {
+  EMPTY_META_VALUE,
   formatMoney,
   isServiceFulfilled,
   lineToken,
@@ -25,6 +26,7 @@ import {
   orderSourceKind,
   orderSourceLabel,
   parseServedTokens,
+  serializeServedTokens,
   serviceStatus,
   type OrderSummary,
 } from "@/types/square";
@@ -122,11 +124,8 @@ function KitchenScreen() {
       ...o,
       metadata: {
         ...o.metadata,
-        kds_served_1: servedTokens.join(","),
-        kds_served_2: "",
-        kds_served_3: "",
-        kds_served_4: "",
-        kds_fulfilled_at: fulfilled ? new Date().toISOString() : "",
+        ...serializeServedTokens(servedTokens),
+        kds_fulfilled_at: fulfilled ? new Date().toISOString() : EMPTY_META_VALUE,
       },
     }));
     serviceMutation.mutate({ orderId: order.id, servedTokens, fulfilled });
