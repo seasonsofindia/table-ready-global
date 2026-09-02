@@ -92,10 +92,21 @@ function KitchenScreen() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
   const [tab, setTab] = useState<"active" | "served">("active");
+  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
 
   useEffect(() => {
     if (window.localStorage.getItem(REFRESH_MODE_KEY) === "manual") setAutoRefresh(false);
+    const saved = Number(window.localStorage.getItem(ROTATION_KEY));
+    if (saved === 90 || saved === 180 || saved === 270) setRotation(saved);
   }, []);
+
+  const rotateScreen = () => {
+    setRotation((prev) => {
+      const next = ((prev + 90) % 360) as 0 | 90 | 180 | 270;
+      window.localStorage.setItem(ROTATION_KEY, String(next));
+      return next;
+    });
+  };
 
   const toggleRefresh = () => {
     setAutoRefresh((prev) => {
@@ -104,6 +115,7 @@ function KitchenScreen() {
       return next;
     });
   };
+
 
   const ordersQuery = useQuery({
     queryKey: ["kitchen-orders"],
@@ -164,8 +176,9 @@ function KitchenScreen() {
   const servedOrders = allOrders.filter((o) => isServiceFulfilled(o));
   const visible = tab === "active" ? activeOrders : servedOrders;
 
-  return (
+  const content = (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-6">
+
       <header className="flex flex-wrap items-center justify-end gap-2">
         <Button
           variant="outline"
@@ -280,7 +293,31 @@ function KitchenScreen() {
       ) : null}
     </main>
   );
+
+  if (rotation === 0) return content;
+
+  const quarter = rotation === 90 || rotation === 270;
+  return (
+    <div className="fixed inset-0 overflow-hidden">
+      <div
+        className="origin-top-left overflow-auto"
+        style={{
+          width: quarter ? "100vh" : "100vw",
+          height: quarter ? "100vw" : "100vh",
+          transform:
+            rotation === 90
+              ? "rotate(90deg) translateY(-100%)"
+              : rotation === 180
+                ? "rotate(180deg) translate(-100%, -100%)"
+                : "rotate(270deg) translateX(-100%)",
+        }}
+      >
+        {content}
+      </div>
+    </div>
+  );
 }
+
 
 function OrderCard({
   order,
