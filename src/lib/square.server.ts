@@ -226,10 +226,14 @@ interface SquareOrder {
   line_items?: {
     uid?: string;
     name?: string;
+    variation_name?: string;
     quantity?: string;
+    note?: string;
     catalog_object_id?: string;
+    modifiers?: { uid?: string; name?: string; catalog_object_id?: string }[];
     total_money?: CatalogMoney;
   }[];
+
   fulfillments?: {
     uid?: string;
     state?: string;
