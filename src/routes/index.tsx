@@ -67,6 +67,24 @@ function sourceVariant(order: OrderSummary) {
   return "outline" as const;
 }
 
+type LineGroup = { name: string; lines: { line: OrderSummary["lineItems"][number]; index: number }[] };
+
+/** Groups line items by menu category while keeping each line's original index. */
+function groupByCategory(lines: OrderSummary["lineItems"]): LineGroup[] {
+  const groups = new Map<string, LineGroup>();
+  lines.forEach((line, index) => {
+    const name = line.categoryName?.trim() || "Other";
+    let group = groups.get(name);
+    if (!group) {
+      group = { name, lines: [] };
+      groups.set(name, group);
+    }
+    group.lines.push({ line, index });
+  });
+  return [...groups.values()];
+}
+
+
 function KitchenScreen() {
   const kitchenFn = useServerFn(getKitchenOrders);
   const serviceFn = useServerFn(updateOrderService);
