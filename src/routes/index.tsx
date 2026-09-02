@@ -323,41 +323,62 @@ function OrderCard({
         </span>
       </div>
 
-      <ul className="mt-3 space-y-1">
-        {order.lineItems.map((line, index) => {
-          const token = lineToken(line, index);
-          const checked = served.has(token);
-          return (
-            <li key={line.uid ?? index}>
-              <button
-                type="button"
-                aria-pressed={checked}
-                disabled={busy}
-                onClick={() => onToggleItem(token)}
-                className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-base transition-colors hover:bg-accent disabled:opacity-60"
-              >
-                <span
-                  className={`flex size-6 shrink-0 items-center justify-center rounded border ${
-                    checked ? "border-primary bg-primary text-primary-foreground" : "border-input"
-                  }`}
-                >
-                  {checked ? <Check className="size-4" /> : null}
-                </span>
-                <span
-                  className={`min-w-0 flex-1 truncate ${
-                    checked ? "text-muted-foreground line-through" : ""
-                  }`}
-                >
-                  {line.quantity} × {line.name}
-                </span>
-                <span className="shrink-0 text-sm text-muted-foreground">
-                  {formatMoney(line.totalAmount, line.currency)}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="mt-3 space-y-3">
+        {groupByCategory(order.lineItems).map((group) => (
+          <div key={group.name}>
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              {group.name}
+            </p>
+            <ul className="space-y-1">
+              {group.lines.map(({ line, index }) => {
+                const token = lineToken(line, index);
+                const checked = served.has(token);
+                return (
+                  <li key={line.uid ?? index}>
+                    <button
+                      type="button"
+                      aria-pressed={checked}
+                      disabled={busy}
+                      onClick={() => onToggleItem(token)}
+                      className="flex w-full items-start gap-2 rounded-md px-1 py-1.5 text-left text-base transition-colors hover:bg-accent disabled:opacity-60"
+                    >
+                      <span
+                        className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded border ${
+                          checked ? "border-primary bg-primary text-primary-foreground" : "border-input"
+                        }`}
+                      >
+                        {checked ? <Check className="size-4" /> : null}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={`block truncate ${
+                            checked ? "text-muted-foreground line-through" : ""
+                          }`}
+                        >
+                          {line.quantity} × {line.name}
+                        </span>
+                        {(line.modifiers ?? []).length > 0 ? (
+                          <span
+                            className={`block text-sm font-bold text-destructive ${
+                              checked ? "opacity-60 line-through" : ""
+                            }`}
+                          >
+                            {(line.modifiers ?? []).join(" · ")}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="shrink-0 text-sm text-muted-foreground">
+                        {formatMoney(line.totalAmount, line.currency)}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+
 
       <div className="mt-3 flex justify-between border-t pt-3 text-base font-semibold">
         <span>Total</span>
