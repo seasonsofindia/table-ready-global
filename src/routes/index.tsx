@@ -281,7 +281,31 @@ function KitchenScreen() {
       ) : null}
     </main>
   );
+
+  if (rotation === 0) return content;
+
+  const quarter = rotation === 90 || rotation === 270;
+  return (
+    <div className="fixed inset-0 overflow-hidden">
+      <div
+        className="origin-top-left overflow-auto"
+        style={{
+          width: quarter ? "100vh" : "100vw",
+          height: quarter ? "100vw" : "100vh",
+          transform:
+            rotation === 90
+              ? "rotate(90deg) translateY(-100%)"
+              : rotation === 180
+                ? "rotate(180deg) translate(-100%, -100%)"
+                : "rotate(270deg) translateX(-100%)",
+        }}
+      >
+        {content}
+      </div>
+    </div>
+  );
 }
+
 
 function OrderCard({
   order,
