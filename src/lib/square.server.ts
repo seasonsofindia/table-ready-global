@@ -555,6 +555,34 @@ async function resolveCategoryNames(objectIds: string[]): Promise<void> {
     }
   }
 
+  // Related objects don't include CATEGORY rows, so fetch the missing names once.
+  const neededCategoryIds = [
+    ...new Set(
+      [...items.values()]
+        .map(
+          (i) =>
+            i.item_data?.reporting_category?.id ??
+            i.item_data?.categories?.[0]?.id ??
+            i.item_data?.category_id ??
+            null,
+        )
+        .filter((id): id is string => Boolean(id) && !categoryNames.has(id!)),
+    ),
+  ];
+  if (neededCategoryIds.length > 0) {
+    const cats = await squareFetch<{ objects?: CatalogObject[] }>("/v2/catalog/batch-retrieve", {
+      method: "POST",
+      body: { object_ids: neededCategoryIds.slice(0, 1000) },
+    });
+    for (const object of cats.objects ?? []) {
+      if (object.type === "CATEGORY") {
+        categoryNames.set(object.id, object.category_data?.name?.trim() || "Other");
+      }
+    }
+  }
+
+
+
   const nameForItem = (item: CatalogObject | undefined): string => {
     const data = item?.item_data;
     const categoryId =
