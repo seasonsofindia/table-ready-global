@@ -164,8 +164,9 @@ function KitchenScreen() {
   const servedOrders = allOrders.filter((o) => isServiceFulfilled(o));
   const visible = tab === "active" ? activeOrders : servedOrders;
 
-  return (
+  const content = (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-6">
+
       <header className="flex flex-wrap items-center justify-end gap-2">
         <Button
           variant="outline"
