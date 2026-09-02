@@ -269,7 +269,14 @@ export function toOrderSummary(order: SquareOrder): OrderSummary {
       catalogObjectId: line.catalog_object_id ?? null,
       totalAmount: typeof line.total_money?.amount === "number" ? line.total_money.amount : null,
       currency: line.total_money?.currency ?? "USD",
+      categoryName: null,
+      modifiers: [
+        ...(line.variation_name && line.variation_name !== line.name ? [line.variation_name] : []),
+        ...(line.modifiers ?? []).map((m) => m.name?.trim()).filter((n): n is string => Boolean(n)),
+        ...(line.note?.trim() ? [line.note.trim()] : []),
+      ],
     })),
+
   };
 }
 
