@@ -92,10 +92,21 @@ function KitchenScreen() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
   const [tab, setTab] = useState<"active" | "served">("active");
+  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
 
   useEffect(() => {
     if (window.localStorage.getItem(REFRESH_MODE_KEY) === "manual") setAutoRefresh(false);
+    const saved = Number(window.localStorage.getItem(ROTATION_KEY));
+    if (saved === 90 || saved === 180 || saved === 270) setRotation(saved);
   }, []);
+
+  const rotateScreen = () => {
+    setRotation((prev) => {
+      const next = ((prev + 90) % 360) as 0 | 90 | 180 | 270;
+      window.localStorage.setItem(ROTATION_KEY, String(next));
+      return next;
+    });
+  };
 
   const toggleRefresh = () => {
     setAutoRefresh((prev) => {
@@ -104,6 +115,7 @@ function KitchenScreen() {
       return next;
     });
   };
+
 
   const ordersQuery = useQuery({
     queryKey: ["kitchen-orders"],
