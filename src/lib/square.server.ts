@@ -226,10 +226,14 @@ interface SquareOrder {
   line_items?: {
     uid?: string;
     name?: string;
+    variation_name?: string;
     quantity?: string;
+    note?: string;
     catalog_object_id?: string;
+    modifiers?: { uid?: string; name?: string; catalog_object_id?: string }[];
     total_money?: CatalogMoney;
   }[];
+
   fulfillments?: {
     uid?: string;
     state?: string;
@@ -265,7 +269,14 @@ export function toOrderSummary(order: SquareOrder): OrderSummary {
       catalogObjectId: line.catalog_object_id ?? null,
       totalAmount: typeof line.total_money?.amount === "number" ? line.total_money.amount : null,
       currency: line.total_money?.currency ?? "USD",
+      categoryName: null,
+      modifiers: [
+        ...(line.variation_name && line.variation_name !== line.name ? [line.variation_name] : []),
+        ...(line.modifiers ?? []).map((m) => m.name?.trim()).filter((n): n is string => Boolean(n)),
+        ...(line.note?.trim() ? [line.note.trim()] : []),
+      ],
     })),
+
   };
 }
 
@@ -518,11 +529,103 @@ export async function setOrderService(input: {
   return toOrderSummary(result.order);
 }
 
-/** Open orders only — the KDS feed. One SearchOrders call. */
+/** Cached variation/item id -> category name so the KDS rarely hits the catalog. */
+const categoryByObjectId = new Map<string, string>();
+
+async function resolveCategoryNames(objectIds: string[]): Promise<void> {
+  const missing = [...new Set(objectIds)].filter((id) => id && !categoryByObjectId.has(id));
+  if (missing.length === 0) return;
+
+  const result = await squareFetch<{ objects?: CatalogObject[]; related_objects?: CatalogObject[] }>(
+    "/v2/catalog/batch-retrieve",
+    {
+      method: "POST",
+      body: { object_ids: missing.slice(0, 1000), include_related_objects: true },
+    },
+  );
+
+  const all = [...(result.objects ?? []), ...(result.related_objects ?? [])];
+  const categoryNames = new Map<string, string>();
+  const items = new Map<string, CatalogObject>();
+  for (const object of all) {
+    if (object.type === "CATEGORY") {
+      categoryNames.set(object.id, object.category_data?.name?.trim() || "Other");
+    } else if (object.type === "ITEM") {
+      items.set(object.id, object);
+    }
+  }
+
+  // Related objects don't include CATEGORY rows, so fetch the missing names once.
+  const neededCategoryIds = [
+    ...new Set(
+      [...items.values()]
+        .map(
+          (i) =>
+            i.item_data?.reporting_category?.id ??
+            i.item_data?.categories?.[0]?.id ??
+            i.item_data?.category_id ??
+            null,
+        )
+        .filter((id): id is string => Boolean(id) && !categoryNames.has(id!)),
+    ),
+  ];
+  if (neededCategoryIds.length > 0) {
+    const cats = await squareFetch<{ objects?: CatalogObject[] }>("/v2/catalog/batch-retrieve", {
+      method: "POST",
+      body: { object_ids: neededCategoryIds.slice(0, 1000) },
+    });
+    for (const object of cats.objects ?? []) {
+      if (object.type === "CATEGORY") {
+        categoryNames.set(object.id, object.category_data?.name?.trim() || "Other");
+      }
+    }
+  }
+
+
+
+  const nameForItem = (item: CatalogObject | undefined): string => {
+    const data = item?.item_data;
+    const categoryId =
+      data?.reporting_category?.id ?? data?.categories?.[0]?.id ?? data?.category_id ?? null;
+    return (categoryId && categoryNames.get(categoryId)) || "Other";
+  };
+
+  for (const object of all) {
+    if (object.type === "ITEM") {
+      categoryByObjectId.set(object.id, nameForItem(object));
+    } else if (object.type === "ITEM_VARIATION") {
+      const itemId = object.item_variation_data?.item_id;
+      categoryByObjectId.set(object.id, nameForItem(itemId ? items.get(itemId) : undefined));
+    }
+  }
+
+  // Anything unresolved gets cached as "Other" so we don't refetch it every poll.
+  for (const id of missing) if (!categoryByObjectId.has(id)) categoryByObjectId.set(id, "Other");
+}
+
+/** Open orders only — the KDS feed. One SearchOrders call (plus a cached catalog lookup). */
 export async function listKitchenOrders(hours: number): Promise<OrderSummary[]> {
   const orders = await searchOrders({ states: ["OPEN"], sinceHours: hours });
-  return orders.map(toOrderSummary);
+  const summaries = orders.map(toOrderSummary);
+
+  const ids = summaries.flatMap((o) =>
+    o.lineItems.map((l) => l.catalogObjectId).filter((id): id is string => Boolean(id)),
+  );
+  try {
+    await resolveCategoryNames(ids);
+  } catch {
+    // Category names are cosmetic — never fail the KDS feed over them.
+  }
+  for (const order of summaries) {
+    for (const line of order.lineItems) {
+      line.categoryName = line.catalogObjectId
+        ? (categoryByObjectId.get(line.catalogObjectId) ?? "Other")
+        : "Other";
+    }
+  }
+  return summaries;
 }
+
 
 
 export function verifyAdminPin(pin: string): boolean {

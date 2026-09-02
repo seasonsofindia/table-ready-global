@@ -45,7 +45,12 @@ export interface OrderLine {
   catalogObjectId: string | null;
   totalAmount: number | null;
   currency: string;
+  /** Menu category name, resolved from the catalog (cached server-side). */
+  categoryName?: string | null;
+  /** Variation, modifier and note text shown under the item. */
+  modifiers?: string[];
 }
+
 
 export type OrderState = "OPEN" | "COMPLETED" | "CANCELED" | "DRAFT";
 
