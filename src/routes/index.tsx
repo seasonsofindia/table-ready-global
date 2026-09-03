@@ -279,7 +279,7 @@ function KitchenScreen() {
       </div>
 
       {ordersQuery.isPending ? (
-        <div className="mt-6 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 max-h-[calc(100vh-140px)] overflow-x-auto overflow-y-hidden [column-fill:auto]">
+        <div className="mt-6 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 max-h-[min(900px,80vh)] overflow-x-auto overflow-y-hidden [column-fill:auto]">
           {Array.from({ length: 8 }).map((_, index) => (
             <Skeleton key={index} className="mb-4 h-56 break-inside-avoid rounded-xl" />
           ))}
