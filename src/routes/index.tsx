@@ -7,8 +7,11 @@ import {
   ChefHat,
   CircleCheckBig,
   Loader2,
+  Maximize,
+  Minimize,
   RefreshCw,
   RotateCw,
+
 
   Settings2,
   UtensilsCrossed,
@@ -21,7 +24,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getKitchenOrders, updateOrderService } from "@/lib/square.functions";
 import {
   EMPTY_META_VALUE,
-  formatMoney,
   isServiceFulfilled,
   lineToken,
   orderDisplayName,
@@ -95,6 +97,18 @@ function KitchenScreen() {
   const [showOptions, setShowOptions] = useState(false);
   const [tab, setTab] = useState<"active" | "served">("active");
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
 
   useEffect(() => {
     if (window.localStorage.getItem("kds-refresh-mode") === "manual") setAutoRefresh(false);
@@ -179,7 +193,7 @@ function KitchenScreen() {
   const visible = tab === "active" ? activeOrders : servedOrders;
 
   const content = (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-6">
+    <main className="mx-auto min-h-screen w-full max-w-[1800px] px-3 py-4 sm:px-4 sm:py-6">
 
       <header className="flex flex-wrap items-center justify-end gap-2">
         <Button
@@ -218,6 +232,11 @@ function KitchenScreen() {
               <RotateCw className="mr-1 size-4" />
               Rotate {rotation}°
             </Button>
+            <Button variant="outline" size="sm" className="h-11" onClick={toggleFullscreen}>
+              {isFullscreen ? <Minimize className="mr-1 size-4" /> : <Maximize className="mr-1 size-4" />}
+              {isFullscreen ? "Exit full screen" : "Full screen"}
+            </Button>
+
 
             <Button variant={autoRefresh ? "secondary" : "outline"} size="sm" className="h-11" onClick={toggleRefresh}>
               {autoRefresh ? "Auto refresh" : "Manual refresh"}
@@ -260,7 +279,7 @@ function KitchenScreen() {
       </div>
 
       {ordersQuery.isPending ? (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-56 rounded-xl" />
           ))}
@@ -277,7 +296,7 @@ function KitchenScreen() {
           {tab === "active" ? "No active orders right now." : "Nothing served yet."}
         </p>
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {visible.map((order) => (
             <OrderCard
               key={order.id}
@@ -413,7 +432,7 @@ function OrderCard({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span
-                          className={`block truncate ${
+                          className={`block break-words ${
                             checked ? "text-muted-foreground line-through" : ""
                           }`}
                         >
@@ -429,9 +448,6 @@ function OrderCard({
                           </span>
                         ) : null}
                       </span>
-                      <span className="shrink-0 text-sm text-muted-foreground">
-                        {formatMoney(line.totalAmount, line.currency)}
-                      </span>
                     </button>
                   </li>
                 );
@@ -442,10 +458,6 @@ function OrderCard({
       </div>
 
 
-      <div className="mt-3 flex justify-between border-t pt-3 text-base font-semibold">
-        <span>Total</span>
-        <span>{formatMoney(order.totalAmount, order.currency)}</span>
-      </div>
 
       {status === "SERVED" ? (
         <Button variant="outline" className="mt-3 h-11 w-full" disabled={busy} onClick={onReopen}>
