@@ -214,6 +214,11 @@ function KitchenScreen() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="h-11" onClick={rotateScreen}>
+              <RotateCw className="mr-1 size-4" />
+              Rotate {rotation}°
+            </Button>
+
             <Button variant={autoRefresh ? "secondary" : "outline"} size="sm" className="h-11" onClick={toggleRefresh}>
               {autoRefresh ? "Auto refresh" : "Manual refresh"}
             </Button>
