@@ -372,7 +372,7 @@ function OrderCard({
         : "bg-card";
 
   return (
-    <article className={`rounded-xl border p-5 shadow-sm text-base ${cardTone}`}>
+    <article className={`mb-4 break-inside-avoid rounded-xl border p-5 shadow-sm text-base ${cardTone}`}>
       <div className="flex items-start justify-between gap-2">
         <h2 className="min-w-0 text-3xl font-bold leading-tight tracking-tight">
           {orderDisplayName(order)}
