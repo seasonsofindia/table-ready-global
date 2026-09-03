@@ -296,7 +296,7 @@ function KitchenScreen() {
           {tab === "active" ? "No active orders right now." : "Nothing served yet."}
         </p>
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="mt-6 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 3xl:columns-6 max-h-[calc(100vh-140px)] overflow-x-auto overflow-y-hidden [column-fill:auto]">
           {visible.map((order) => (
             <OrderCard
               key={order.id}
