@@ -449,9 +449,6 @@ function OrderCard({
                           </span>
                         ) : null}
                       </span>
-                      <span className="shrink-0 text-sm text-muted-foreground">
-                        {formatMoney(line.totalAmount, line.currency)}
-                      </span>
                     </button>
                   </li>
                 );
