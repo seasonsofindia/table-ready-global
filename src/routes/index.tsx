@@ -8,6 +8,8 @@ import {
   CircleCheckBig,
   Loader2,
   RefreshCw,
+  RotateCw,
+
   Settings2,
   UtensilsCrossed,
 } from "lucide-react";
@@ -50,6 +52,8 @@ export const Route = createFileRoute("/")({
 });
 
 const REFRESH_MODE_KEY = "kds-refresh-mode";
+const ROTATION_KEY = "kds-rotation";
+
 type OrdersData = { orders: OrderSummary[] };
 
 function elapsed(createdAt: string | null): string {
@@ -212,6 +216,11 @@ function KitchenScreen() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="h-11" onClick={rotateScreen}>
+              <RotateCw className="mr-1 size-4" />
+              Rotate {rotation}°
+            </Button>
+
             <Button variant={autoRefresh ? "secondary" : "outline"} size="sm" className="h-11" onClick={toggleRefresh}>
               {autoRefresh ? "Auto refresh" : "Manual refresh"}
             </Button>
