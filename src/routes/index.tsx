@@ -24,7 +24,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getKitchenOrders, updateOrderService } from "@/lib/square.functions";
 import {
   EMPTY_META_VALUE,
-  formatMoney,
   isServiceFulfilled,
   lineToken,
   orderDisplayName,
@@ -194,7 +193,7 @@ function KitchenScreen() {
   const visible = tab === "active" ? activeOrders : servedOrders;
 
   const content = (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-6">
+    <main className="mx-auto min-h-screen w-full max-w-[1800px] px-3 py-4 sm:px-4 sm:py-6">
 
       <header className="flex flex-wrap items-center justify-end gap-2">
         <Button
@@ -280,7 +279,7 @@ function KitchenScreen() {
       </div>
 
       {ordersQuery.isPending ? (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-56 rounded-xl" />
           ))}
@@ -297,7 +296,7 @@ function KitchenScreen() {
           {tab === "active" ? "No active orders right now." : "Nothing served yet."}
         </p>
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {visible.map((order) => (
             <OrderCard
               key={order.id}
@@ -433,7 +432,7 @@ function OrderCard({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span
-                          className={`block truncate ${
+                          className={`block break-words ${
                             checked ? "text-muted-foreground line-through" : ""
                           }`}
                         >
