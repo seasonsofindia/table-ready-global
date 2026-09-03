@@ -459,10 +459,6 @@ function OrderCard({
       </div>
 
 
-      <div className="mt-3 flex justify-between border-t pt-3 text-base font-semibold">
-        <span>Total</span>
-        <span>{formatMoney(order.totalAmount, order.currency)}</span>
-      </div>
 
       {status === "SERVED" ? (
         <Button variant="outline" className="mt-3 h-11 w-full" disabled={busy} onClick={onReopen}>
