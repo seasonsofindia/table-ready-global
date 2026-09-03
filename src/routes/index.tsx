@@ -279,9 +279,9 @@ function KitchenScreen() {
       </div>
 
       {ordersQuery.isPending ? (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-56 rounded-xl" />
+        <div className="mt-6 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 max-h-[min(900px,80vh)] overflow-x-auto overflow-y-hidden [column-fill:auto]">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <Skeleton key={index} className="mb-4 h-56 break-inside-avoid rounded-xl" />
           ))}
         </div>
       ) : ordersQuery.isError ? (
@@ -296,7 +296,7 @@ function KitchenScreen() {
           {tab === "active" ? "No active orders right now." : "Nothing served yet."}
         </p>
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="mt-6 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 max-h-[calc(100vh-140px)] overflow-x-auto overflow-y-hidden [column-fill:auto]">
           {visible.map((order) => (
             <OrderCard
               key={order.id}
@@ -372,7 +372,7 @@ function OrderCard({
         : "bg-card";
 
   return (
-    <article className={`rounded-xl border p-5 shadow-sm text-base ${cardTone}`}>
+    <article className={`mb-4 break-inside-avoid rounded-xl border p-5 shadow-sm text-base ${cardTone}`}>
       <div className="flex items-start justify-between gap-2">
         <h2 className="min-w-0 text-3xl font-bold leading-tight tracking-tight">
           {orderDisplayName(order)}
