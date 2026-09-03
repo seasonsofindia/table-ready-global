@@ -50,6 +50,8 @@ export const Route = createFileRoute("/")({
 });
 
 const REFRESH_MODE_KEY = "kds-refresh-mode";
+const ROTATION_KEY = "kds-rotation";
+
 type OrdersData = { orders: OrderSummary[] };
 
 function elapsed(createdAt: string | null): string {
