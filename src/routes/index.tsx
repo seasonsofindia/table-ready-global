@@ -51,8 +51,6 @@ export const Route = createFileRoute("/")({
   component: KitchenScreen,
 });
 
-const REFRESH_MODE_KEY = "kds-refresh-mode";
-const ROTATION_KEY = "kds-rotation";
 
 type OrdersData = { orders: OrderSummary[] };
 
@@ -99,15 +97,15 @@ function KitchenScreen() {
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
 
   useEffect(() => {
-    if (window.localStorage.getItem(REFRESH_MODE_KEY) === "manual") setAutoRefresh(false);
-    const saved = Number(window.localStorage.getItem(ROTATION_KEY));
+    if (window.localStorage.getItem("kds-refresh-mode") === "manual") setAutoRefresh(false);
+    const saved = Number(window.localStorage.getItem("kds-rotation"));
     if (saved === 90 || saved === 180 || saved === 270) setRotation(saved);
   }, []);
 
   const rotateScreen = () => {
     setRotation((prev) => {
       const next = ((prev + 90) % 360) as 0 | 90 | 180 | 270;
-      window.localStorage.setItem(ROTATION_KEY, String(next));
+      window.localStorage.setItem("kds-rotation", String(next));
       return next;
     });
   };
@@ -115,7 +113,7 @@ function KitchenScreen() {
   const toggleRefresh = () => {
     setAutoRefresh((prev) => {
       const next = !prev;
-      window.localStorage.setItem(REFRESH_MODE_KEY, next ? "auto" : "manual");
+      window.localStorage.setItem("kds-refresh-mode", next ? "auto" : "manual");
       return next;
     });
   };
