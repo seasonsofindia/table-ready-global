@@ -7,8 +7,11 @@ import {
   ChefHat,
   CircleCheckBig,
   Loader2,
+  Maximize,
+  Minimize,
   RefreshCw,
   RotateCw,
+
 
   Settings2,
   UtensilsCrossed,
@@ -95,6 +98,18 @@ function KitchenScreen() {
   const [showOptions, setShowOptions] = useState(false);
   const [tab, setTab] = useState<"active" | "served">("active");
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
 
   useEffect(() => {
     if (window.localStorage.getItem("kds-refresh-mode") === "manual") setAutoRefresh(false);
