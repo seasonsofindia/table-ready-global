@@ -233,6 +233,11 @@ function KitchenScreen() {
               <RotateCw className="mr-1 size-4" />
               Rotate {rotation}°
             </Button>
+            <Button variant="outline" size="sm" className="h-11" onClick={toggleFullscreen}>
+              {isFullscreen ? <Minimize className="mr-1 size-4" /> : <Maximize className="mr-1 size-4" />}
+              {isFullscreen ? "Exit full screen" : "Full screen"}
+            </Button>
+
 
             <Button variant={autoRefresh ? "secondary" : "outline"} size="sm" className="h-11" onClick={toggleRefresh}>
               {autoRefresh ? "Auto refresh" : "Manual refresh"}
