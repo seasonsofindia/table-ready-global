@@ -56,6 +56,29 @@ export const Route = createFileRoute("/")({
 
 type OrdersData = { orders: OrderSummary[] };
 
+/**
+ * Paid (completed) Square orders can no longer be updated, so their served
+ * state is kept on this device and merged over the order metadata.
+ */
+const LOCAL_SERVICE_KEY = "kds-local-service";
+type LocalService = Record<string, { served: string[]; fulfilled: boolean }>;
+
+function readLocalService(): LocalService {
+  try {
+    return JSON.parse(window.localStorage.getItem(LOCAL_SERVICE_KEY) ?? "{}") as LocalService;
+  } catch {
+    return {};
+  }
+}
+
+function writeLocalService(next: LocalService) {
+  try {
+    window.localStorage.setItem(LOCAL_SERVICE_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 function elapsed(createdAt: string | null): string {
   if (!createdAt) return "";
   const minutes = Math.max(0, Math.round((Date.now() - new Date(createdAt).getTime()) / 60000));
