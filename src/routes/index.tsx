@@ -121,6 +121,11 @@ function KitchenScreen() {
   const [tab, setTab] = useState<"active" | "served">("active");
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [localService, setLocalService] = useState<LocalService>({});
+
+  useEffect(() => {
+    setLocalService(readLocalService());
+  }, []);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
