@@ -16,7 +16,6 @@ import {
   Settings2,
   UtensilsCrossed,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +54,29 @@ export const Route = createFileRoute("/")({
 
 
 type OrdersData = { orders: OrderSummary[] };
+
+/**
+ * Paid (completed) Square orders can no longer be updated, so their served
+ * state is kept on this device and merged over the order metadata.
+ */
+const LOCAL_SERVICE_KEY = "kds-local-service";
+type LocalService = Record<string, { served: string[]; fulfilled: boolean }>;
+
+function readLocalService(): LocalService {
+  try {
+    return JSON.parse(window.localStorage.getItem(LOCAL_SERVICE_KEY) ?? "{}") as LocalService;
+  } catch {
+    return {};
+  }
+}
+
+function writeLocalService(next: LocalService) {
+  try {
+    window.localStorage.setItem(LOCAL_SERVICE_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 function elapsed(createdAt: string | null): string {
   if (!createdAt) return "";
@@ -98,6 +120,11 @@ function KitchenScreen() {
   const [tab, setTab] = useState<"active" | "served">("active");
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [localService, setLocalService] = useState<LocalService>({});
+
+  useEffect(() => {
+    setLocalService(readLocalService());
+  }, []);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -150,6 +177,14 @@ function KitchenScreen() {
     );
   };
 
+  const rememberLocally = (vars: { orderId: string; servedTokens: string[]; fulfilled: boolean }) => {
+    setLocalService((prev) => {
+      const next = { ...prev, [vars.orderId]: { served: vars.servedTokens, fulfilled: vars.fulfilled } };
+      writeLocalService(next);
+      return next;
+    });
+  };
+
   const serviceMutation = useMutation({
     mutationFn: (vars: { orderId: string; servedTokens: string[]; fulfilled: boolean }) =>
       serviceFn({ data: vars }),
@@ -157,11 +192,9 @@ function KitchenScreen() {
       // Only the changed order is replaced — no full reload.
       patchOrder(result.order.id, () => result.order);
     },
-    onError: (error, vars) => {
-      toast.error(error instanceof Error ? error.message : "Could not update order");
-      // Roll back by refetching just this order's state from the list.
-      void queryClient.invalidateQueries({ queryKey: ["kitchen-orders"] });
-      void vars;
+    onError: (_error, vars) => {
+      // Paid/closed orders can't be updated in Square — keep the state on this screen.
+      rememberLocally(vars);
     },
   });
 
@@ -175,6 +208,7 @@ function KitchenScreen() {
         kds_fulfilled_at: fulfilled ? new Date().toISOString() : EMPTY_META_VALUE,
       },
     }));
+    if (localService[order.id]) rememberLocally({ orderId: order.id, servedTokens, fulfilled });
     serviceMutation.mutate({ orderId: order.id, servedTokens, fulfilled });
   };
 
@@ -187,7 +221,19 @@ function KitchenScreen() {
     applyService(order, [...served], isServiceFulfilled(order) && allDone);
   };
 
-  const allOrders = ordersQuery.data?.orders ?? [];
+  const allOrders = (ordersQuery.data?.orders ?? []).map((order) => {
+    const local = localService[order.id];
+    if (!local) return order;
+    return {
+      ...order,
+      metadata: {
+        ...order.metadata,
+        ...serializeServedTokens(local.served),
+        kds_fulfilled_at: local.fulfilled ? new Date().toISOString() : EMPTY_META_VALUE,
+      },
+    };
+  });
+
   const activeOrders = allOrders.filter((o) => !isServiceFulfilled(o));
   const servedOrders = allOrders.filter((o) => isServiceFulfilled(o));
   const visible = tab === "active" ? activeOrders : servedOrders;

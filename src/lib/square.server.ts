@@ -603,9 +603,12 @@ async function resolveCategoryNames(objectIds: string[]): Promise<void> {
   for (const id of missing) if (!categoryByObjectId.has(id)) categoryByObjectId.set(id, "Other");
 }
 
-/** Open orders only — the KDS feed. One SearchOrders call (plus a cached catalog lookup). */
+/**
+ * KDS feed: open orders plus recently completed (paid) ones, so a paid order
+ * stays on the board until the kitchen marks it served. One SearchOrders call.
+ */
 export async function listKitchenOrders(hours: number): Promise<OrderSummary[]> {
-  const orders = await searchOrders({ states: ["OPEN"], sinceHours: hours });
+  const orders = await searchOrders({ states: ["OPEN", "COMPLETED"], sinceHours: hours });
   const summaries = orders.map(toOrderSummary);
 
   const ids = summaries.flatMap((o) =>
