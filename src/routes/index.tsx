@@ -20,9 +20,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getKitchenOrders, updateOrderService } from "@/lib/square.functions";
+import { getKitchenOrders, updateOrderService, closeTableOrder } from "@/lib/square.functions";
 import {
   EMPTY_META_VALUE,
+  FULFILLED_META_KEY,
   isServiceFulfilled,
   lineToken,
   orderDisplayName,
@@ -198,6 +199,39 @@ function KitchenScreen() {
     },
   });
 
+  // Close (complete) an order on Square. When an order is paid at the POS this
+  // transitions it to COMPLETED. This mutation allows marking a Served order as
+  // fully completed.
+  const closeFn = useServerFn(closeTableOrder);
+  const closeOrderMutation = useMutation({
+    mutationFn: (vars: { orderId: string }) => closeFn({ data: vars }),
+    onSuccess: (result) => {
+      // Replace the returned order but clear the KDS fulfilled flag so the
+      // order stops appearing in the Served list. Also remove any local fallback
+      // so local state doesn't reintroduce the fulfilled flag.
+      patchOrder(result.order.id, (o) => ({
+        ...result.order,
+        metadata: {
+          ...result.order.metadata,
+          [FULFILLED_META_KEY]: EMPTY_META_VALUE,
+        },
+      }));
+
+      setLocalService((prev) => {
+        if (!prev[result.order.id]) return prev;
+        const next = { ...prev };
+        delete next[result.order.id];
+        writeLocalService(next);
+        return next;
+      });
+    },
+    onError: (error) => {
+      // If closing fails, fall back to refetch so UI stays consistent.
+      console.error("[kds] closeOrder failed", error);
+      void ordersQuery.refetch();
+    },
+  });
+
   const applyService = (order: OrderSummary, servedTokens: string[], fulfilled: boolean) => {
     // Optimistic: reflect the new metadata locally right away.
     patchOrder(order.id, (o) => ({
@@ -368,10 +402,14 @@ function KitchenScreen() {
                 <OrderCard
                   key={order.id}
                   order={order}
-                  busy={serviceMutation.isPending && serviceMutation.variables?.orderId === order.id}
+                  busy={
+                    (serviceMutation.isPending && serviceMutation.variables?.orderId === order.id) ||
+                    (closeOrderMutation.isPending && closeOrderMutation.variables?.orderId === order.id)
+                  }
                   onToggleItem={(token) => toggleItem(order, token)}
                   onMarkServed={() => applyService(order, order.lineItems.map((l, i) => lineToken(l, i)), true)}
                   onReopen={() => applyService(order, [...parseServedTokens(order.metadata)], false)}
+                  onMarkCompleted={() => closeOrderMutation.mutate({ orderId: order.id })}
                   height={cardHeight}
                 />
               );
@@ -418,6 +456,7 @@ function OrderCard({
   onToggleItem,
   onMarkServed,
   onReopen,
+  onMarkCompleted,
   height,
 }: {
   order: OrderSummary;
@@ -425,6 +464,7 @@ function OrderCard({
   onToggleItem: (token: string) => void;
   onMarkServed: () => void;
   onReopen: () => void;
+  onMarkCompleted?: () => void;
   height?: number;
 }) {
   const served = parseServedTokens(order.metadata);
@@ -493,7 +533,7 @@ function OrderCard({
           <Badge variant={sourceVariant(order)} className="text-sm h-6">
             {orderSourceLabel(order)}
           </Badge>
-          {orderSourceKind(order) === "POS" && status !== "SERVED" ? (
+          {status !== "SERVED" ? (
             <Button
               variant="ghost"
               size="sm"
@@ -593,9 +633,19 @@ function OrderCard({
 
 
       {status === "SERVED" ? (
-        <Button variant="outline" className="mt-3 h-11 w-full" disabled={busy} onClick={onReopen}>
-          Move back to active
-        </Button>
+        <div className="mt-3 flex gap-2">
+          <Button
+            variant="secondary"
+            className="flex-1 h-11"
+            disabled={busy || !onMarkCompleted}
+            onClick={onMarkCompleted}
+          >
+            Mark completed
+          </Button>
+          <Button variant="outline" className="flex-1 h-11" disabled={busy} onClick={onReopen}>
+            Move back to active
+          </Button>
+        </div>
       ) : null}
     </article>
   );

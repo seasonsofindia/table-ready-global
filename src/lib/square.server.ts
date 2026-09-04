@@ -605,7 +605,9 @@ async function resolveCategoryNames(objectIds: string[]): Promise<void> {
 
 /**
  * KDS feed: open orders plus recently completed (paid) ones, so a paid order
- * stays on the board until the kitchen marks it served. One SearchOrders call.
+ * stays on the board until the kitchen marks it served. If payment happens
+ * before items are served, the order will appear in Active (not Served) until
+ * the kitchen marks it fulfilled (kds_fulfilled_at).
  */
 export async function listKitchenOrders(hours: number): Promise<OrderSummary[]> {
   const orders = await searchOrders({ states: ["OPEN", "COMPLETED"], sinceHours: hours });
