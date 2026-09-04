@@ -192,8 +192,21 @@ function KitchenScreen() {
   const servedOrders = allOrders.filter((o) => isServiceFulfilled(o));
   const visible = tab === "active" ? activeOrders : servedOrders;
 
+  // TV-optimized dense grid: row-major, receive-order flow, with each tile height based on its own content size.
+  const gridColumns = rotation === 90 || rotation === 270 ? 2 : 3;
+  const tileAreaStyle = {
+    display: "grid",
+    gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+    gridAutoFlow: "row",
+    alignItems: "start",
+    alignContent: "start",
+    gap: "1rem",
+    height: "100%",
+    overflow: "hidden",
+  } as const;
+
   const content = (
-    <main className="mx-auto min-h-screen w-full max-w-[1800px] px-3 py-4 sm:px-4 sm:py-6">
+    <main className="mx-auto min-h-screen w-full max-w-[1800px] px-3 py-4 sm:px-4 sm:py-6 flex flex-col">
 
       <header className="flex flex-wrap items-center justify-end gap-2">
         <Button
@@ -279,9 +292,9 @@ function KitchenScreen() {
       </div>
 
       {ordersQuery.isPending ? (
-        <div className="mt-6 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 max-h-[min(900px,80vh)] overflow-x-auto overflow-y-hidden [column-fill:auto]">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <Skeleton key={index} className="mb-4 h-56 break-inside-avoid rounded-xl" />
+        <div className="mt-6 flex-1 overflow-hidden" style={tileAreaStyle}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="mb-4 block h-56 w-full rounded-xl" />
           ))}
         </div>
       ) : ordersQuery.isError ? (
@@ -296,19 +309,27 @@ function KitchenScreen() {
           {tab === "active" ? "No active orders right now." : "Nothing served yet."}
         </p>
       ) : (
-        <div className="mt-6 columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 max-h-[min(900px,80vh)] overflow-x-auto overflow-y-hidden [column-fill:auto]">
-          {visible.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              busy={serviceMutation.isPending && serviceMutation.variables?.orderId === order.id}
-              onToggleItem={(token) => toggleItem(order, token)}
-              onMarkServed={() =>
-                applyService(order, order.lineItems.map((l, i) => lineToken(l, i)), true)
-              }
-              onReopen={() => applyService(order, [...parseServedTokens(order.metadata)], false)}
-            />
-          ))}
+        <div className="mt-6 flex-1 overflow-hidden" style={tileAreaStyle}>
+          {[...visible]
+            .sort((a, b) => {
+              const ta = new Date(a.createdAt ?? 0).getTime();
+              const tb = new Date(b.createdAt ?? 0).getTime();
+              return ta - tb;
+            })
+            .map((order) => {
+              const cardHeight = 150 + order.lineItems.length * 28 + (order.lineItems.reduce((sum, line) => sum + (line.modifiers?.length ?? 0), 0) * 8);
+              return (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  busy={serviceMutation.isPending && serviceMutation.variables?.orderId === order.id}
+                  onToggleItem={(token) => toggleItem(order, token)}
+                  onMarkServed={() => applyService(order, order.lineItems.map((l, i) => lineToken(l, i)), true)}
+                  onReopen={() => applyService(order, [...parseServedTokens(order.metadata)], false)}
+                  height={cardHeight}
+                />
+              );
+            })}
         </div>
       )}
 
@@ -351,18 +372,60 @@ function OrderCard({
   onToggleItem,
   onMarkServed,
   onReopen,
+  height,
 }: {
   order: OrderSummary;
   busy: boolean;
   onToggleItem: (token: string) => void;
   onMarkServed: () => void;
   onReopen: () => void;
+  height?: number;
 }) {
   const served = parseServedTokens(order.metadata);
   const status = serviceStatus(order);
   const total = order.lineItems.length;
   const done = order.lineItems.filter((line, i) => served.has(lineToken(line, i))).length;
   const allDone = total > 0 && done === total;
+
+  // Local per-client seen tokens so newly added lines can be marked "New".
+  const seenKey = `kds_seen_${order.id}`;
+  const [seen, setSeen] = useState<Set<string>>(() => {
+    try {
+      const raw = window.localStorage.getItem(seenKey);
+      return raw ? new Set(raw.split(",").filter(Boolean)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  // Initialize seen snapshot on first render for this order (if missing)
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(seenKey);
+      if (!raw) {
+        const initial = order.lineItems.map((l, i) => lineToken(l, i)).join(",");
+        window.localStorage.setItem(seenKey, initial);
+        setSeen(new Set(initial.split(",").filter(Boolean)));
+      }
+    } catch {
+      // ignore storage errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.id]);
+
+  // When items become served, mark them as seen so badge disappears.
+  useEffect(() => {
+    try {
+      const s = new Set(seen);
+      for (const t of served) s.add(t);
+      const arr = [...s];
+      window.localStorage.setItem(seenKey, arr.join(","));
+      setSeen(s);
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Array.from(served).join(",")]);
 
   const cardTone =
     status === "SERVED"
@@ -372,7 +435,10 @@ function OrderCard({
         : "bg-card";
 
   return (
-    <article className={`mb-4 break-inside-avoid rounded-xl border p-5 shadow-sm text-base ${cardTone}`}>
+    <article
+      className={`mb-4 w-full break-inside-avoid rounded-xl border p-5 shadow-sm text-base ${cardTone} flex flex-col self-start`}
+      style={height ? { minHeight: height } : undefined}
+    >
       <div className="flex items-start justify-between gap-2">
         <h2 className="min-w-0 text-3xl font-bold leading-tight tracking-tight">
           {orderDisplayName(order)}
@@ -444,13 +510,21 @@ function OrderCard({
                         {checked ? <Check className="size-4" /> : null}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span
-                          className={`block break-words ${
-                            checked ? "text-muted-foreground line-through" : ""
-                          }`}
-                        >
-                          {line.quantity} × {line.name}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`block break-words ${
+                              checked ? "text-muted-foreground line-through" : ""
+                            }`}
+                          >
+                            {line.quantity} × {line.name}
+                          </span>
+                          {/* New badge for newly added lines (per-client localStorage) */}
+                          {(!checked && !seen.has(token)) ? (
+                            <Badge variant="secondary" className="text-xs h-5 px-2">
+                              New
+                            </Badge>
+                          ) : null}
+                        </div>
                         {(line.modifiers ?? []).length > 0 ? (
                           <span
                             className={`block text-sm font-bold text-destructive ${
