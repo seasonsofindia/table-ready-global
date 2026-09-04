@@ -377,9 +377,22 @@ function OrderCard({
         <h2 className="min-w-0 text-3xl font-bold leading-tight tracking-tight">
           {orderDisplayName(order)}
         </h2>
-        <Badge variant={sourceVariant(order)} className="text-sm h-6">
-          {orderSourceLabel(order)}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={sourceVariant(order)} className="text-sm h-6">
+            {orderSourceLabel(order)}
+          </Badge>
+          {orderSourceKind(order) === "POS" && status !== "SERVED" ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2"
+              disabled={!allDone || busy}
+              onClick={onMarkServed}
+            >
+              Served
+            </Button>
+          ) : null}
+        </div>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
         {elapsed(order.createdAt)}
@@ -406,8 +419,8 @@ function OrderCard({
 
       <div className="mt-3 space-y-3">
         {groupByCategory(order.lineItems).map((group) => (
-          <div key={group.name}>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <div key={group.name} className="break-inside-avoid mb-3">
+            <p className="mb-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               {group.name}
             </p>
             <ul className="space-y-1">
@@ -463,15 +476,7 @@ function OrderCard({
         <Button variant="outline" className="mt-3 h-11 w-full" disabled={busy} onClick={onReopen}>
           Move back to active
         </Button>
-      ) : (
-        <Button className="mt-3 h-11 w-full" disabled={!allDone || busy} onClick={onMarkServed}>
-          <CircleCheckBig className="mr-1 size-4" />
-          {allDone ? "Mark as served" : `Check all items (${done}/${total})`}
-        </Button>
-      )}
-      <p className="mt-2 text-center text-xs text-muted-foreground">
-        Service status only — payment is unchanged in Square.
-      </p>
+      ) : null}
     </article>
   );
 }
