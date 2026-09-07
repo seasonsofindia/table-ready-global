@@ -598,7 +598,7 @@ function OrderCard({
                       <span className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`block break-words ${
+                            className={`block break-words text-lg ${
                               checked ? "text-muted-foreground line-through" : ""
                             }`}
                           >
