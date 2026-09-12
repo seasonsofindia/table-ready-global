@@ -1,63 +1,94 @@
-# Public online ordering: same project vs. new project
+# New project: public online ordering site (Square)
 
-## Current situation
+Build this as a **separate project** from the staff app. This one is public and lives on your domain; the staff app (KDS, table ordering, admin) stays internal. Both read and write the same Square location, so menu, prices and orders stay in sync automatically.
 
-- This project is already published and **public** on the Free plan.
-- `/` (kitchen display), `/order` (table ordering) and `/admin` are reachable by anyone who knows or guesses the URL.
-- Right now they are not gated, so the whole staff tool is exposed to the internet.
-- Your Free plan does not let us make the published site private.
+## Why separate
 
-Because of that, **putting both the customer shop and the staff tools in this one public project is risky**. A bug in the gate, a leaked route, or an SSR data leak could expose live orders, customer details and the admin panel.
+- The public site has no kitchen, admin or order-history code at all, so there is nothing to leak.
+- The staff app can stay unpublished/private without affecting customers.
+- Different release cadence: you can redeploy the shop without touching the kitchen screen mid-service.
 
-## Recommended architecture: two projects
+## Customer flow
 
-Keep this project as the **internal staff tool** and create a new Lovable project as the **public ordering site**.
+1. **Menu** — categories and items from the live Square catalog, with item images, descriptions, sold-out state, and modifiers/variations.
+2. **Cart** — quantities, per-item options and notes, running subtotal (indicative only).
+3. **Checkout** — name, phone, email; pickup or delivery; address for delivery; requested time; order note.
+4. **Server-side quote** — the real totals (item prices, taxes, service charge, delivery fee, discounts) come back from Square, never from the browser.
+5. **Payment** — Square card fields hosted by Square's Web Payments SDK on your own checkout page; also Apple Pay / Google Pay / Cash App Pay.
+6. **Confirmation** — order number, ETA, Square receipt emailed to the customer.
+7. **Kitchen** — the order lands in Square Dashboard/POS as an online order and appears on your existing kitchen display.
 
-| | Staff project (this one) | Public ordering project (new) |
-|---|---|---|
-| Audience | Kitchen, servers, managers | Customers on your website |
-| Routes | `/` KDS, `/order` table ordering, `/admin` | `/` menu, `/checkout`, `/confirmation/:id` |
-| Publishing | Keep unpublished, or upgrade and set private | Publish publicly and embed in your site |
-| Square access | Read/write orders, update service state, view recent orders | Read catalog, create orders, take payments |
-| Leak risk | URL is not public (or is private) — much lower | No staff routes or data exist to leak |
-| Menu sync | Automatic — both read the same Square catalog | Automatic — both read the same Square catalog |
+## Square APIs used
 
-Both projects talk to the same Square location, so the menu, prices, taxes and orders stay in sync. The public project never has the functions that list kitchen orders, close orders or view order history.
+| Purpose | API / endpoint |
+|---|---|
+| Menu, categories, modifiers, images | Catalog — `SearchCatalogObjects`, `BatchRetrieveCatalogObjects` |
+| Sold-out / stock | Inventory — `BatchRetrieveInventoryCounts` |
+| Store hours, currency, timezone | Locations — `RetrieveLocation` |
+| Price/tax/fee calculation before paying | Orders — `CalculateOrder` |
+| Create the order | Orders — `CreateOrder` (with `PICKUP` or `DELIVERY` fulfillment) |
+| Card form, digital wallets | Web Payments SDK (browser) |
+| Charge the card | Payments — `CreatePayment` (with `order_id`, `idempotency_key`) |
+| Repeat customers, saved profile | Customers — `SearchCustomers`, `CreateCustomer` (optional) |
+| Discount / promo codes | Orders discounts, or Loyalty API (optional) |
+| Gift cards | Gift Cards + Gift Card Activities (optional) |
+| Refunds from admin | Refunds — `RefundPayment` (optional) |
+| Live status: paid / ready / picked up | Webhooks — `payment.updated`, `order.fulfillment.updated`, `order.updated` |
 
-## What we build in the new public project
+Digital wallets need domain verification with Apple; Square provides the file to host.
 
-1. **Menu page** — browse categories/items from Square, add to cart.
-2. **Checkout page** — name, phone, email, pickup or delivery, address (if delivery), requested time, notes.
-3. **Payment** — Square Web Payments SDK card fields on your own page; token goes to our server function, which charges via Square Payments API.
-4. **Order creation** — order is created in Square as an online order with `PICKUP` or `DELIVERY` fulfillment and `source.name: "Online"` so it appears in Square Dashboard the same way Square Online orders do.
-5. **Confirmation** — order number, pickup time, receipt email from Square.
-6. **Operational guardrails** — open/close hours, lead time, delivery fee/minimum, sold-out re-check, double-submit prevention, abuse limits.
-7. **Embedding support** — `X-Frame-Options` / CSP `frame-ancestors` allow only your website domain.
+## Hard-won lessons from the staff app (build these in from day one)
 
-## What happens to this project
+These cost real debugging time on the existing app. Do not rediscover them.
 
-1. Add a **staff gate** so `/`, `/order` and `/admin` require a staff session.
-2. Keep `/admin` behind its existing PIN **and** the staff gate.
-3. Remove or redirect any public-facing accidental entry points.
-4. Optionally leave this project **unpublished** and access it via the preview/dev URL, or upgrade to a paid plan and set it to private.
+1. **Fulfillments are mandatory for the order to show up properly.** An order without a fulfillment does not route to the POS/printer and looks invisible in the Dashboard. Create `PICKUP`/`DELIVERY` with `state: PROPOSED`, then immediately `UpdateOrder` it to `RESERVED`. Square rejects `RESERVED` at creation time, and rejects `IN_STORE` fulfillment for third-party apps.
+2. **`ticket_name` and `source.name`** must be set at creation — that is what the kitchen and the Dashboard display. Without them every order looks anonymous and gets mislabelled.
+3. **Order metadata cannot hold empty strings.** Square rejects them, and `fields_to_clear` returned a 500. Use a sentinel value (`"-"`) for a cleared field.
+4. **Every write needs `version`** from a fresh read; a stale version fails the update. Always retrieve, then write, then use the returned order.
+5. **Completed/paid orders cannot be updated.** Anything you want to change after payment must be decided before it, or stored outside Square.
+6. **Idempotency keys on every create/update/payment** — Square requires them and they are your only protection against a double charge on a double click.
+7. **Category names are not on the item you fetch.** They require a second `BatchRetrieveCatalogObjects` for the category IDs, and related objects do not include category rows. Cache the lookup in memory; never refetch per render.
+8. **Catalog is paginated** — always loop the cursor, or half your menu silently disappears.
+9. **Location filtering matters.** Items can be absent at a location or sold out only at that location (`location_overrides`). Filter with `present_at_all_locations`, `present_at_location_ids`, `absent_at_location_ids`.
+10. **Only `FIXED_PRICING` variations are orderable.** Variable-price items must be hidden or handled explicitly.
+11. **Sandbox vs production tokens are not interchangeable** — a mismatch gives a bare 401. Derive the base URL from the environment variable, never hardcode it.
+12. **Read credentials inside the handler, not at module load** — env is injected per request on the hosting runtime, so module-level reads are `undefined` in production.
+13. **Pin the `Square-Version` header** so an API upgrade cannot silently change the response shape.
+14. **Search is time-filtered.** `SearchOrders` needs a `date_time_filter`; without it you get unpredictable result sets.
+15. **Surface Square's error `detail`, `code` and `field`** — the generic message hides which field was wrong and turns a one-minute fix into an hour.
+16. **Webhook signature is HMAC over `notificationUrl + rawBody`**, read the raw body before parsing, and reject when the key is absent rather than trusting the call.
 
-## Edge cases covered
+## Public-site edge cases
 
-- Prices, tax and totals are recomputed server-side from Square by catalog object ID — the browser cannot set its own price.
-- Order is created only after the payment succeeds, or created then immediately cancelled if payment fails — no orphan unpaid orders.
-- Idempotency keys prevent double charges if the customer clicks Pay twice.
-- Sold-out/deleted items are re-checked at checkout against live Square catalog.
-- Card fields fail to load (network, blocker): checkout shows a clear error instead of a broken button.
-- Delivery address validation plus a configurable radius/zone limit.
-- Abuse rate limits on public order/pay endpoints.
+- Price tampering: recompute with `CalculateOrder` from catalog IDs; never trust browser amounts.
+- Payment succeeds but the browser closes: the order is already paid in Square; confirmation is recoverable by order ID.
+- Payment fails: cancel the order so no unpaid ghost tickets reach the kitchen.
+- Item sells out between menu load and pay: re-check stock at checkout and tell the customer which item dropped.
+- Closed hours / too-soon pickup time: block with a clear message, using the location's timezone, not the browser's.
+- Delivery: minimum order, flat fee, and a radius or postcode allow-list.
+- Rate limiting and a honeypot field on the public order endpoint.
+- `frame-ancestors` limited to your domain if you embed; otherwise serve at `order.yourdomain.com`.
+- Accessibility and mobile-first layout — most traffic will be phones.
+- No card data ever touches our code; only Square's tokenized nonce.
 
-## Alternative: one project with a strong gate
+## Secrets for the new project
 
-We can add the public shop to this same project and lock the staff routes with an encrypted staff session. It is faster and costs one project, but the residual risk is higher because staff data and customer data live in the same deployed app. I would only choose this if you want to launch this week and accept the trade-off.
+`SQUARE_ACCESS_TOKEN`, `SQUARE_ENVIRONMENT`, `SQUARE_LOCATION_ID`, `SQUARE_APPLICATION_ID` (public, used by the card form), `SQUARE_WEBHOOK_SIGNATURE_KEY`.
 
-## What I need before building
+## Build order
 
-- Your website domain for the embed allow-list.
-- Pickup hours, lead time, and whether you want delivery now or later.
-- Delivery fee, minimum order, and any zone/radius limit.
-- Whether you want to create the new project now and build the public site there, or start by gating this project and add the shop here first.
+1. Menu + cart against sandbox.
+2. Checkout form + `CalculateOrder` quote.
+3. `CreateOrder` with fulfillment, verify it appears correctly in the Square sandbox Dashboard and on the kitchen display.
+4. Web Payments SDK card field + `CreatePayment`, including failure/cancel path.
+5. Hours, lead time, delivery rules.
+6. Webhooks for live status.
+7. Switch to production credentials, connect your domain, soft launch pickup-only.
+
+## What I need from you
+
+- Your domain (and whether the shop is embedded in the site or on `order.yourdomain.com`).
+- Pickup hours and lead time.
+- Delivery: on at launch or later, fee, minimum, zone.
+- Whether you want digital wallets (Apple/Google Pay) at launch.
+- Tipping at checkout: yes or no.
