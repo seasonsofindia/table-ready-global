@@ -1,61 +1,63 @@
-# Public online ordering, on this same project
+# Public online ordering: same project vs. new project
 
-No new project needed. One codebase, two audiences: a public ordering page you embed in your website, and the staff screens (kitchen display, table ordering, admin) locked to your devices.
+## Current situation
 
-## Why one project
+- This project is already published and **public** on the Free plan.
+- `/` (kitchen display), `/order` (table ordering) and `/admin` are reachable by anyone who knows or guesses the URL.
+- Right now they are not gated, so the whole staff tool is exposed to the internet.
+- Your Free plan does not let us make the published site private.
 
-The Square token, menu, order logic and kitchen display already live here and work. Splitting means two copies of the same Square code, two sets of credentials, and orders arriving from two places. Instead: add public pages, and put a gate in front of the staff pages.
+Because of that, **putting both the customer shop and the staff tools in this one public project is risky**. A bug in the gate, a leaked route, or an SSR data leak could expose live orders, customer details and the admin panel.
 
-## What customers get
+## Recommended architecture: two projects
 
-A new public page at `/shop`, designed to sit inside your website (an `order.yoursite.com` subdomain or an embedded frame — both supported).
+Keep this project as the **internal staff tool** and create a new Lovable project as the **public ordering site**.
 
-1. Menu from Square (the same live catalog the table app uses).
-2. Cart, then a checkout step: name, phone, email, pickup or delivery, address when delivery, requested time, order notes.
-3. Card details entered on the page itself (Square's own secure card fields — card numbers never touch our code or your server).
-4. On pay: the order is created in Square as an online order with a pickup or delivery fulfillment, then charged. It lands in your Square POS/Dashboard like your current Square Online orders, and appears on the kitchen display.
-5. Confirmation screen with order number and pickup time; a Square receipt is emailed.
+| | Staff project (this one) | Public ordering project (new) |
+|---|---|---|
+| Audience | Kitchen, servers, managers | Customers on your website |
+| Routes | `/` KDS, `/order` table ordering, `/admin` | `/` menu, `/checkout`, `/confirmation/:id` |
+| Publishing | Keep unpublished, or upgrade and set private | Publish publicly and embed in your site |
+| Square access | Read/write orders, update service state, view recent orders | Read catalog, create orders, take payments |
+| Leak risk | URL is not public (or is private) — much lower | No staff routes or data exist to leak |
+| Menu sync | Automatic — both read the same Square catalog | Automatic — both read the same Square catalog |
 
-Delivery is priced by a flat fee plus an optional minimum you set; no live courier integration.
+Both projects talk to the same Square location, so the menu, prices, taxes and orders stay in sync. The public project never has the functions that list kitchen orders, close orders or view order history.
 
-## Locking the staff screens
+## What we build in the new public project
 
-- The kitchen display, table ordering and admin pages check for a staff pass on the device. No pass, no page and no data — the page redirects out and the underlying data calls refuse to answer.
-- You hand out the pass once per device by opening a secret setup link (contains a key only you have). The device then stays signed in for months. Day to day, staff open the app and it just works — no PIN.
-- Admin keeps its own PIN on top of the staff pass.
-- The public shop pages stay open to everyone and never expose kitchen or order-history data.
+1. **Menu page** — browse categories/items from Square, add to cart.
+2. **Checkout page** — name, phone, email, pickup or delivery, address (if delivery), requested time, notes.
+3. **Payment** — Square Web Payments SDK card fields on your own page; token goes to our server function, which charges via Square Payments API.
+4. **Order creation** — order is created in Square as an online order with `PICKUP` or `DELIVERY` fulfillment and `source.name: "Online"` so it appears in Square Dashboard the same way Square Online orders do.
+5. **Confirmation** — order number, pickup time, receipt email from Square.
+6. **Operational guardrails** — open/close hours, lead time, delivery fee/minimum, sold-out re-check, double-submit prevention, abuse limits.
+7. **Embedding support** — `X-Frame-Options` / CSP `frame-ancestors` allow only your website domain.
 
-## Edge cases handled
+## What happens to this project
 
-- Prices, taxes and totals are always taken from Square by item ID — never from whatever the browser sends.
-- A payment that succeeds but a page that closes still leaves a paid order in Square; a failed card leaves no ghost order (order is created, then cancelled if payment fails).
-- Double-tap on Pay can't charge twice.
-- Sold-out or deleted items are re-checked at checkout, not just when the menu loaded.
-- Closed hours / pickup times: orders outside your ordering window are refused with a clear message.
-- Basic abuse limits on the public order and pay calls.
-- Only your website domain is allowed to embed the shop; staff pages can't be embedded anywhere.
-- Card fields fail to load (blocked script, bad network): checkout shows an error instead of a dead button.
+1. Add a **staff gate** so `/`, `/order` and `/admin` require a staff session.
+2. Keep `/admin` behind its existing PIN **and** the staff gate.
+3. Remove or redirect any public-facing accidental entry points.
+4. Optionally leave this project **unpublished** and access it via the preview/dev URL, or upgrade to a paid plan and set it to private.
 
-## Rollout
+## Edge cases covered
 
-1. Public shop + checkout in Square's sandbox, pay-later disabled, test cards only.
-2. Staff gate applied to kitchen/table/admin, staff devices set up.
-3. Switch to live Square credentials, embed on your website, soft launch with pickup only.
-4. Turn on delivery.
+- Prices, tax and totals are recomputed server-side from Square by catalog object ID — the browser cannot set its own price.
+- Order is created only after the payment succeeds, or created then immediately cancelled if payment fails — no orphan unpaid orders.
+- Idempotency keys prevent double charges if the customer clicks Pay twice.
+- Sold-out/deleted items are re-checked at checkout against live Square catalog.
+- Card fields fail to load (network, blocker): checkout shows a clear error instead of a broken button.
+- Delivery address validation plus a configurable radius/zone limit.
+- Abuse rate limits on public order/pay endpoints.
 
-## Technical notes
+## Alternative: one project with a strong gate
 
-- New routes: `src/routes/shop/index.tsx` (menu + cart), `src/routes/shop/checkout.tsx`, `src/routes/shop/confirmation.$orderId.tsx`.
-- New `src/lib/shop.functions.ts` + `shop.server.ts`: `getPublicMenu`, `quoteOrder` (server-side totals), `placeOrder` (CreateOrder with `PICKUP`/`DELIVERY` fulfillment, `source.name`, `state: OPEN`), `payOrder` (Payments API `CreatePayment` with `order_id`, `idempotency_key`, `autocomplete: true`). Order and payment run in one server call so a failed charge cancels the order.
-- Card entry uses the Square Web Payments SDK loaded from Square's CDN; needs `SQUARE_APPLICATION_ID` (public, safe in code) and the existing location ID. Token is posted to `payOrder`; no PAN ever reaches the server.
-- Staff gate: signed HTTP-only cookie (`HMAC(deviceId, STAFF_SECRET)`), issued by `/staff-setup?key=STAFF_SETUP_KEY`. A `requireStaff` server-fn middleware wraps `getKitchenOrders`, `updateOrderService`, `getRecentOrders`, and the table-ordering functions; `beforeLoad` on `/`, `/order`, `/admin` redirects when the cookie is absent. Admin PIN check stays as-is on top.
-- New secrets: `STAFF_SECRET` (generated), `STAFF_SETUP_KEY` (generated), `SQUARE_APPLICATION_ID`.
-- `Content-Security-Policy: frame-ancestors` allows your site on `/shop/*` only; `X-Frame-Options: DENY` equivalent on staff routes.
-- Rate limiting is in-memory per worker (adequate at this volume); add a store-backed limiter only if abuse shows up.
-- Webhook route unchanged; `payment.updated` can later auto-mark paid orders.
+We can add the public shop to this same project and lock the staff routes with an encrypted staff session. It is faster and costs one project, but the residual risk is higher because staff data and customer data live in the same deployed app. I would only choose this if you want to launch this week and accept the trade-off.
 
-## What I need from you before build
+## What I need before building
 
-- Your website domain (for the embed allowance).
-- Pickup lead time and ordering hours.
-- Delivery: flat fee, minimum order, and whether you want a radius/zone limit.
+- Your website domain for the embed allow-list.
+- Pickup hours, lead time, and whether you want delivery now or later.
+- Delivery fee, minimum order, and any zone/radius limit.
+- Whether you want to create the new project now and build the public site there, or start by gating this project and add the shop here first.
