@@ -497,7 +497,7 @@ export async function setOrderService(input: {
   orderId: string;
   servedTokens: string[];
   fulfilled: boolean;
-}): Promise<OrderSummary> {
+}): Promise<{ order: OrderSummary; persisted: boolean }> {
   const { locationId } = getSquareConfig();
   const current = await retrieveOrder(input.orderId);
 
