@@ -189,9 +189,11 @@ function KitchenScreen() {
   const serviceMutation = useMutation({
     mutationFn: (vars: { orderId: string; servedTokens: string[]; fulfilled: boolean }) =>
       serviceFn({ data: vars }),
-    onSuccess: (result) => {
+    onSuccess: (result, vars) => {
       // Only the changed order is replaced — no full reload.
       patchOrder(result.order.id, () => result.order);
+      // Paid/closed orders can't hold the state in Square — keep it on this screen.
+      if (!result.persisted) rememberLocally(vars);
     },
     onError: (_error, vars) => {
       // Paid/closed orders can't be updated in Square — keep the state on this screen.
