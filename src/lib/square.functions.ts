@@ -85,8 +85,7 @@ export const updateOrderService = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const order = await setOrderService(data);
-      return { order };
+      return await setOrderService(data);
     } catch (error) {
       console.error("[kds] setOrderService failed", JSON.stringify(data), error);
       throw error;

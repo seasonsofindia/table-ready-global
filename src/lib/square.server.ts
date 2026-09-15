@@ -497,7 +497,7 @@ export async function setOrderService(input: {
   orderId: string;
   servedTokens: string[];
   fulfilled: boolean;
-}): Promise<OrderSummary> {
+}): Promise<{ order: OrderSummary; persisted: boolean }> {
   const { locationId } = getSquareConfig();
   const current = await retrieveOrder(input.orderId);
 
@@ -510,6 +510,16 @@ export async function setOrderService(input: {
   const metadata: Record<string, string> = {};
   for (const [key, value] of Object.entries(desired)) {
     metadata[key] = value || EMPTY_META_VALUE;
+  }
+
+  // Paid/closed orders can't be updated in Square. Return the order with the
+  // requested state merged in so the screen stays consistent instead of erroring.
+  if (current.state === "COMPLETED" || current.state === "CANCELED") {
+    const summary = toOrderSummary(current);
+    return {
+      order: { ...summary, metadata: { ...summary.metadata, ...metadata } },
+      persisted: false,
+    };
   }
 
   const result = await squareFetch<{ order: SquareOrder }>(
@@ -526,7 +536,7 @@ export async function setOrderService(input: {
       },
     },
   );
-  return toOrderSummary(result.order);
+  return { order: toOrderSummary(result.order), persisted: true };
 }
 
 /** Cached variation/item id -> category name so the KDS rarely hits the catalog. */
