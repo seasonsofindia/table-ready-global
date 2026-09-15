@@ -536,7 +536,7 @@ export async function setOrderService(input: {
       },
     },
   );
-  return toOrderSummary(result.order);
+  return { order: toOrderSummary(result.order), persisted: true };
 }
 
 /** Cached variation/item id -> category name so the KDS rarely hits the catalog. */
