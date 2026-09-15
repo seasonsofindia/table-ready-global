@@ -512,6 +512,16 @@ export async function setOrderService(input: {
     metadata[key] = value || EMPTY_META_VALUE;
   }
 
+  // Paid/closed orders can't be updated in Square. Return the order with the
+  // requested state merged in so the screen stays consistent instead of erroring.
+  if (current.state === "COMPLETED" || current.state === "CANCELED") {
+    const summary = toOrderSummary(current);
+    return {
+      order: { ...summary, metadata: { ...summary.metadata, ...metadata } },
+      persisted: false,
+    };
+  }
+
   const result = await squareFetch<{ order: SquareOrder }>(
     `/v2/orders/${encodeURIComponent(input.orderId)}`,
     {
