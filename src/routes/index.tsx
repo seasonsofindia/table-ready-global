@@ -164,7 +164,7 @@ function KitchenScreen() {
   const ordersQuery = useQuery({
     queryKey: ["kitchen-orders"],
     queryFn: () => kitchenFn({ data: { hours: 12 } }),
-    refetchInterval: autoRefresh ? 30_000 : false,
+    refetchInterval: autoRefresh ? 10_000 : false,
     refetchOnWindowFocus: autoRefresh,
     refetchOnReconnect: autoRefresh,
     retry: false,
